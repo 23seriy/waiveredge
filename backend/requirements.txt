@@ -1,0 +1,18 @@
+# --- Core: API + scoring + real-data ingestion ---
+# The scoring core (app/scoring) is pure stdlib; these power the API, DB, and the
+# real-data pipeline.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+httpx==0.28.1
+python-dotenv==1.0.1
+
+# Real NBA data straight from stats.nba.com (the source balldontlie wraps). The app
+# materializes its fixtures from this on first use. Pulls pandas/numpy/requests.
+nba_api==1.11.4
+
+# --- Dev/test ---
+pytest==8.3.4
