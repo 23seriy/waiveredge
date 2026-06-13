@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Env / secrets
+.env
+.env.local
+backend/.env
+
+# Node / Next
+node_modules/
+.next/
+out/
+next-env.d.ts
+npm-debug.log*
+*.tsbuildinfo
+
+# Tooling
+.serena/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Data: the real fixtures are reproducible via scripts/dump_real_fixtures.py
+# (and re-materialized by the app on demand), so keep the JSON out of git.
+backend/sample_data/*.json
