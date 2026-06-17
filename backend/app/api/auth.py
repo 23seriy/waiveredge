@@ -1,0 +1,91 @@
+"""Yahoo OAuth 2.0 authentication endpoints.
+
+Flow:
+1. Frontend calls GET /api/auth/yahoo → redirect to Yahoo consent screen.
+2. Yahoo redirects back to GET /api/auth/yahoo/callback?code=... .
+3. We exchange the code for tokens, upsert a user + league_connection,
+   and redirect back to the frontend with the connection_id.
+"""
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
+
+from ..config import settings
+from ..data.yahoo import YahooFantasyClient, authorization_url, exchange_code
+from ..db import get_db
+from ..models import LeagueConnection, User
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+FRONTEND_BASE = "http://localhost:3000"
+
+
+@router.get("/yahoo")
+def yahoo_login():
+    """Redirect the user to Yahoo's OAuth consent page."""
+    if not settings.yahoo_client_id:
+        raise HTTPException(status_code=503, detail="Yahoo OAuth is not configured.")
+    return RedirectResponse(authorization_url())
+
+
+@router.get("/yahoo/callback")
+def yahoo_callback(code: str = Query(...), db: Session = Depends(get_db)):
+    """Handle Yahoo's OAuth callback — exchange code, create connection."""
+    try:
+        tokens = exchange_code(code)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Token exchange failed: {exc}") from exc
+
+    yc = YahooFantasyClient(tokens)
+    leagues = yc.user_leagues()
+    if not leagues:
+        return RedirectResponse(f"{FRONTEND_BASE}/connect?error=no_leagues")
+
+    # For v1 we auto-pick the first NBA league.
+    league = leagues[0]
+    team_key = yc.my_team_key(league["league_key"])
+    league_settings = yc.league_settings(league["league_key"])
+    final_tokens = yc.current_tokens
+
+    # Upsert user (placeholder email until we decode Yahoo's id_token).
+    email = f"yahoo-{league['league_key']}@waiveredge.local"
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(email=email)
+        db.add(user)
+        db.flush()
+
+    # Upsert league connection.
+    conn = (
+        db.query(LeagueConnection)
+        .filter(LeagueConnection.user_id == user.id,
+                LeagueConnection.league_id == league["league_key"])
+        .first()
+    )
+    if conn:
+        conn.oauth_tokens = final_tokens
+        conn.team_key = team_key
+        conn.scoring_json = {
+            "scoring_type": league_settings.get("scoring_type", ""),
+            "categories": league_settings.get("categories", []),
+        }
+    else:
+        conn = LeagueConnection(
+            user_id=user.id,
+            platform="yahoo",
+            league_id=league["league_key"],
+            team_key=team_key,
+            scoring_json={
+                "scoring_type": league_settings.get("scoring_type", ""),
+                "categories": league_settings.get("categories", []),
+            },
+            oauth_tokens=final_tokens,
+        )
+        db.add(conn)
+    db.flush()
+    connection_id = conn.id
+    db.commit()
+
+    return RedirectResponse(f"{FRONTEND_BASE}/league/{connection_id}")

@@ -13,6 +13,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from .api.auth import router as auth_router
+from .api.billing import router as billing_router
+from .api.leagues import router as leagues_router
 from .config import settings
 from .recommendations import manual_recommendations, sample_recommendations, top_streamers
 from .scoring.scoring_systems import CATEGORY_META, NINE_CAT
@@ -33,6 +36,9 @@ class ManualRosterRequest(BaseModel):
                     "Defaults to the standard 9-cat set.")
 
 app = FastAPI(title="WaiverEdge API", version="0.1.0")
+app.include_router(auth_router)
+app.include_router(billing_router)
+app.include_router(leagues_router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -280,6 +280,18 @@ export default function Home() {
             >
               <Flame size={14} /> Streamers
             </Link>
+            <Link
+              href="/connect"
+              className="text-sm text-muted hover:text-accent transition-colors"
+            >
+              Connect Yahoo
+            </Link>
+            <Link
+              href="/pricing"
+              className="text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+            >
+              Pro
+            </Link>
             <ModeToggle mode={mode} onChange={handleModeChange} />
           </div>
         </div>
