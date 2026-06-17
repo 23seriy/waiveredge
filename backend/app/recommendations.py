@@ -12,11 +12,11 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .scoring.categories import rank_category_adds
-from .scoring.engine import rank_waiver_adds
+from .scoring.engine import games_in_window, project_value, rank_waiver_adds
 from .scoring.matchups import compute_dvp
 from .scoring.projections import project_all
 from .scoring.scoring_systems import DEFAULT_POINTS_SCORING, league_from_config
-from .scoring.types import GameLog, Injury, Player, ScheduledGame
+from .scoring.types import GameLog, Injury, Player, Projection, ScheduledGame
 
 SAMPLE_DIR = Path(__file__).resolve().parents[1] / "sample_data"
 
@@ -177,4 +177,78 @@ def sample_recommendations(scoring_mode: str = "points") -> dict:
         "week": {"start": fx["roster"]["week_start"], "end": fx["roster"]["week_end"]},
         "scoring_mode": scoring_mode,
         "recommendations": build_recommendations(fx),
+    }
+
+
+def top_streamers(top_n: int = 30) -> dict:
+    """Top streaming pickups this week ranked by absolute projected value.
+
+    No roster required — this is the public, free, SEO-friendly page content.
+    Returns the schedule density grid (games per team) and the ranked player list.
+    """
+    fx = load_fixtures()
+    cfg = fx["roster"]
+    window = (cfg["week_start"], cfg["week_end"])
+
+    players = {p["id"]: Player(p["id"], p["name"], p["team_id"], p["positions"])
+               for p in fx["players"]}
+    all_logs = [GameLog(**lg) for lg in fx["game_logs"]]
+    logs_by_player: dict[int, list[GameLog]] = {}
+    for lg in all_logs:
+        logs_by_player.setdefault(lg.player_id, []).append(lg)
+    schedule = [ScheduledGame(**g) for g in fx["schedule"]]
+    injuries = {i["player_id"]: Injury(**i) for i in fx["injuries"]}
+
+    players_by_team: dict[int, list[Player]] = {}
+    for p in players.values():
+        players_by_team.setdefault(p.team_id, []).append(p)
+
+    projections = project_all(logs_by_player)
+    dvp = compute_dvp(all_logs)
+
+    # Build team lookup and schedule density grid.
+    teams_by_id = {t["id"]: t for t in fx["teams"]}
+    team_games: dict[int, list[dict]] = {}
+    for tid in teams_by_id:
+        games = games_in_window(tid, schedule, window[0], window[1])
+        team_games[tid] = [
+            {"date": g.date, "opponent": teams_by_id.get(g.opponent_of(tid), {}).get("abbreviation", "?")}
+            for g in games
+        ]
+    schedule_grid = [
+        {"team_id": tid, "abbreviation": teams_by_id[tid]["abbreviation"],
+         "games": len(gs), "matchups": gs}
+        for tid, gs in sorted(team_games.items(), key=lambda kv: len(kv[1]), reverse=True)
+    ]
+
+    # Rank all players by absolute projected value.
+    ranked: list[dict] = []
+    for p in players.values():
+        proj = projections.get(p.id, Projection(p.id, 0.0, 0, {}))
+        if proj.games_sampled < 3 or proj.fppg < 10:
+            continue
+        vr = project_value(p, proj, schedule, window, dvp, injuries, players_by_team)
+        if vr.n_games == 0:
+            continue
+        ranked.append({
+            "player_id": p.id,
+            "name": p.name,
+            "position": "/".join(p.positions),
+            "team": teams_by_id.get(p.team_id, {}).get("abbreviation", "?"),
+            "n_games": vr.n_games,
+            "soft_matchups": vr.soft_matchups,
+            "fppg": proj.fppg,
+            "projected_total": vr.value,
+            "matchups": [
+                {"opponent": teams_by_id.get(c.opponent_id, {}).get("abbreviation", "?"),
+                 "mult": round(c.matchup_mult, 2)}
+                for c in vr.contributions
+            ],
+        })
+    ranked.sort(key=lambda r: r["projected_total"], reverse=True)
+
+    return {
+        "week": {"start": cfg["week_start"], "end": cfg["week_end"]},
+        "schedule_grid": schedule_grid,
+        "streamers": ranked[:top_n],
     }

@@ -9,12 +9,14 @@ import {
   ArrowUpDown,
   Calendar,
   ChevronDown,
+  Flame,
   Loader2,
   RotateCcw,
   Search,
   TrendingUp,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 
 type ScoringMode = "points" | "categories";
 
@@ -271,7 +273,15 @@ export default function Home() {
             </div>
             <h1 className="text-lg font-bold tracking-tight">WaiverEdge</h1>
           </div>
-          <ModeToggle mode={mode} onChange={handleModeChange} />
+          <div className="flex items-center gap-3">
+            <Link
+              href="/streamers"
+              className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors"
+            >
+              <Flame size={14} /> Streamers
+            </Link>
+            <ModeToggle mode={mode} onChange={handleModeChange} />
+          </div>
         </div>
       </header>
 
