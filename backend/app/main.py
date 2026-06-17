@@ -7,12 +7,15 @@ import + ingestion are wired up (see app/data/ingest.py).
 """
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .config import settings
 from .recommendations import manual_recommendations, sample_recommendations
+from .scoring.scoring_systems import CATEGORY_META, NINE_CAT
 
 
 class ManualRosterRequest(BaseModel):
@@ -21,6 +24,13 @@ class ManualRosterRequest(BaseModel):
     droppable: list[str] = Field(default_factory=list, max_length=30,
                                  description="Optional subset of roster the user is willing to drop. "
                                              "Empty = the engine picks the weakest position match.")
+    scoring_mode: Literal["points", "categories"] = Field(
+        default="points",
+        description="'points' for weighted-sum scoring, 'categories' for 9-cat z-score ranking.")
+    categories: list[str] = Field(
+        default_factory=lambda: list(NINE_CAT),
+        description="Active categories for category mode (ignored in points mode). "
+                    "Defaults to the standard 9-cat set.")
 
 app = FastAPI(title="WaiverEdge API", version="0.1.0")
 
@@ -38,15 +48,16 @@ def health() -> dict:
 
 
 @app.get("/api/recommendations/sample")
-def recommendations_sample() -> dict:
+def recommendations_sample(mode: Literal["points", "categories"] = "points") -> dict:
     """Ranked waiver adds for the sample roster (runs the live scoring engine)."""
-    return sample_recommendations()
+    return sample_recommendations(scoring_mode=mode)
 
 
 @app.post("/api/recommendations/manual")
 def recommendations_manual(req: ManualRosterRequest) -> dict:
     """Ranked waiver adds for a user-typed roster (bridge to per-user before OAuth)."""
-    result = manual_recommendations(req.roster, req.droppable)
+    cats = [c for c in req.categories if c in CATEGORY_META] if req.scoring_mode == "categories" else None
+    result = manual_recommendations(req.roster, req.droppable, scoring_mode=req.scoring_mode, categories=cats)
     if result["resolved_count"] == 0:
         raise HTTPException(
             status_code=400,
