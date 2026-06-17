@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .config import settings
-from .recommendations import manual_recommendations, sample_recommendations
+from .recommendations import manual_recommendations, sample_recommendations, top_streamers
 from .scoring.scoring_systems import CATEGORY_META, NINE_CAT
 
 
@@ -65,6 +65,12 @@ def recommendations_manual(req: ManualRosterRequest) -> dict:
                     "unresolved": result["unresolved"]},
         )
     return result
+
+
+@app.get("/api/streamers")
+def streamers(top: int = 30) -> dict:
+    """Top streaming pickups this week + schedule density grid. No auth required."""
+    return top_streamers(top_n=min(top, 50))
 
 
 # TODO: @app.get("/api/recommendations/{connection_id}") — DB-backed, per-user.
