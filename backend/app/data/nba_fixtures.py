@@ -222,7 +222,10 @@ def build_real_fixtures(out_dir: Path, seasons: list[str] | None = None) -> dict
             primary = pos_map.get(pid, ["UTIL"])[0]
             stats = {"pts": r.get("PTS") or 0, "reb": r.get("REB") or 0, "ast": r.get("AST") or 0,
                      "stl": r.get("STL") or 0, "blk": r.get("BLK") or 0, "fg3m": r.get("FG3M") or 0,
-                     "turnover": r.get("TOV") or 0}
+                     "turnover": r.get("TOV") or 0,
+                     # Shooting volume for FG%/FT% categories (9-cat mode).
+                     "fgm": r.get("FGM") or 0, "fga": r.get("FGA") or 0,
+                     "ftm": r.get("FTM") or 0, "fta": r.get("FTA") or 0}
             logs_json.append({"player_id": pid, "game_id": gid, "date": date, "team_id": team_id,
                               "opponent_id": opp_id, "position": primary, "stats": stats})
             logs_by_player.setdefault(pid, []).append(

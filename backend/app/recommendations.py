@@ -11,9 +11,11 @@ import unicodedata
 from dataclasses import asdict
 from pathlib import Path
 
+from .scoring.categories import rank_category_adds
 from .scoring.engine import rank_waiver_adds
 from .scoring.matchups import compute_dvp
 from .scoring.projections import project_all
+from .scoring.scoring_systems import DEFAULT_POINTS_SCORING, league_from_config
 from .scoring.types import GameLog, Injury, Player, ScheduledGame
 
 SAMPLE_DIR = Path(__file__).resolve().parents[1] / "sample_data"
@@ -38,8 +40,14 @@ def load_fixtures() -> dict:
 
 
 def build_recommendations(fx: dict) -> list[dict]:
-    scoring = fx["roster"]["scoring"]
-    window = (fx["roster"]["week_start"], fx["roster"]["week_end"])
+    cfg = fx["roster"]
+    league = league_from_config({"mode": cfg.get("mode", "points"),
+                                 "weights": cfg.get("scoring"),
+                                 "categories": cfg.get("categories")})
+    window = (cfg["week_start"], cfg["week_end"])
+    # Points weights drive fppg + the DvP matchup buckets; per-game projections
+    # (used by category mode) are computed regardless of the weights.
+    weights = league.weights if league.mode == "points" else DEFAULT_POINTS_SCORING
 
     players = {p["id"]: Player(p["id"], p["name"], p["team_id"], p["positions"])
                for p in fx["players"]}
@@ -54,15 +62,19 @@ def build_recommendations(fx: dict) -> list[dict]:
     for p in players.values():
         players_by_team.setdefault(p.team_id, []).append(p)
 
-    projections = project_all(logs_by_player, scoring)
-    dvp = compute_dvp(all_logs, scoring)
+    projections = project_all(logs_by_player, weights)
+    dvp = compute_dvp(all_logs, weights)
 
-    roster = [players[r["player_id"]] for r in fx["roster"]["roster"]]
-    free_agents = [players[pid] for pid in fx["roster"]["free_agents"]]
-    droppable = set(fx["roster"]["droppable"])
+    roster = [players[r["player_id"]] for r in cfg["roster"]]
+    free_agents = [players[pid] for pid in cfg["free_agents"]]
+    droppable = set(cfg["droppable"])
 
-    recs = rank_waiver_adds(roster, free_agents, droppable, projections, schedule,
-                            window, dvp, injuries, players_by_team)
+    if league.mode == "categories":
+        recs = rank_category_adds(roster, free_agents, droppable, projections, schedule,
+                                  window, dvp, injuries, players_by_team, league.categories)
+    else:
+        recs = rank_waiver_adds(roster, free_agents, droppable, projections, schedule,
+                                window, dvp, injuries, players_by_team)
     return [asdict(r) for r in recs]
 
 
@@ -113,6 +125,8 @@ def manual_recommendations(
     roster_names: list[str],
     droppable_names: list[str] | None = None,
     fixtures: dict | None = None,
+    scoring_mode: str = "points",
+    categories: list[str] | None = None,
 ) -> dict:
     """Run the engine against a user-typed roster, using real NBA data for everything else.
 
@@ -139,6 +153,8 @@ def manual_recommendations(
         "week_start": league["week_start"],
         "week_end": league["week_end"],
         "scoring": league["scoring"],
+        "mode": scoring_mode,
+        "categories": categories,
         "roster": roster_entries,
         "free_agents": free_agents,
         "droppable": [pid for pid in drop_ids if pid in roster_id_set],
@@ -146,15 +162,19 @@ def manual_recommendations(
 
     return {
         "week": {"start": league["week_start"], "end": league["week_end"]},
+        "scoring_mode": scoring_mode,
         "recommendations": build_recommendations(fx) if roster_entries else [],
         "unresolved": unresolved,
         "resolved_count": len(roster_entries),
     }
 
 
-def sample_recommendations() -> dict:
+def sample_recommendations(scoring_mode: str = "points") -> dict:
     fx = load_fixtures()
+    if scoring_mode == "categories":
+        fx["roster"]["mode"] = "categories"
     return {
         "week": {"start": fx["roster"]["week_start"], "end": fx["roster"]["week_end"]},
+        "scoring_mode": scoring_mode,
         "recommendations": build_recommendations(fx),
     }

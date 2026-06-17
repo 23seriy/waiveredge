@@ -80,8 +80,9 @@ class Injury:
 @dataclass
 class Projection:
     player_id: int
-    fppg: float          # recency-weighted fantasy points per game
+    fppg: float          # recency-weighted fantasy points per game (points mode)
     games_sampled: int
+    per_game: dict[str, float] = field(default_factory=dict)  # recency-weighted per-game mean per raw stat (category mode)
 
 
 @dataclass
@@ -107,6 +108,25 @@ class ValueResult:
 
 
 @dataclass
+class CategoryValueResult:
+    """Per-candidate result in category (9-cat) mode.
+
+    `add_value` in a Recommendation maps to `total_z`; the per-category breakdown
+    is carried so the rationale and API can explain *which* categories the player
+    helps (and by how much).
+    """
+    player_id: int
+    n_games: int
+    soft_matchups: int
+    role_mult: float
+    role_note: str
+    avail_prob: float
+    weekly: dict[str, float]          # projected weekly totals per raw stat
+    per_cat_z: dict[str, float]       # signed z per active category (TO already negated)
+    total_z: float                    # sum of per_cat_z over active categories
+
+
+@dataclass
 class Recommendation:
     add_player_id: int
     add_name: str
@@ -120,3 +140,7 @@ class Recommendation:
     soft_matchups: int
     marginal: float              # add_value - drop_value (value gained for THIS roster)
     rationale: str
+    # Category-mode extras (None in points mode)
+    total_z: float | None = None
+    per_cat_z: dict[str, float] | None = None
+    helps: list[str] | None = None  # active categories this add improves where the roster is weak
