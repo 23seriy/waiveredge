@@ -52,7 +52,7 @@ const SPORT_KEY = "waiveredge.sport.v1";
 
 const SPORT_INFO: Record<Sport, { icon: string; name: string; hasData: boolean }> = {
   nba: { icon: "\u{1F3C0}", name: "NBA", hasData: true },
-  mlb: { icon: "\u26BE", name: "MLB", hasData: false },
+  mlb: { icon: "\u26BE", name: "MLB", hasData: true },
 };
 
 const CAT_LABELS: Record<string, string> = {
