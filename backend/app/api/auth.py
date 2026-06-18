@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..data.yahoo import YahooFantasyClient, authorization_url, exchange_code
+from ..data.yahoo import GAME_KEY, YahooFantasyClient, authorization_url, exchange_code
 from ..db import get_db
 from ..models import LeagueConnection, User
 
@@ -21,27 +21,43 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 FRONTEND_BASE = "http://localhost:3000"
 
+# Supported sports — active status reflects whether the season is currently running.
+# Update these seasonally (or drive from a config/DB later).
+SPORTS = [
+    {"key": "nba", "name": "NBA Basketball", "icon": "\U0001f3c0", "active": False, "note": "Offseason — returns Oct 2026"},
+    {"key": "mlb", "name": "MLB Baseball",  "icon": "\u26be",     "active": True,  "note": "In-season"},
+]
+
+
+@router.get("/sports")
+def list_sports() -> list[dict]:
+    """Available sports and their active status."""
+    return SPORTS
+
 
 @router.get("/yahoo")
-def yahoo_login():
+def yahoo_login(sport: str = ""):
     """Redirect the user to Yahoo's OAuth consent page."""
     if not settings.yahoo_client_id:
         raise HTTPException(status_code=503, detail="Yahoo OAuth is not configured.")
-    return RedirectResponse(authorization_url())
+    # Pass the sport as OAuth state so the callback knows which game key to use.
+    return RedirectResponse(authorization_url(state=sport or GAME_KEY))
 
 
 @router.get("/yahoo/callback")
-def yahoo_callback(code: str = Query(...), db: Session = Depends(get_db)):
+def yahoo_callback(code: str = Query(...), state: str = Query(""), db: Session = Depends(get_db)):
     """Handle Yahoo's OAuth callback — exchange code, create connection."""
     try:
         tokens = exchange_code(code)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Token exchange failed: {exc}") from exc
 
+    # state carries the sport game key from the login redirect.
+    game_key = state if state in ("nba", "mlb", "nfl", "nhl") else GAME_KEY
     yc = YahooFantasyClient(tokens)
-    leagues = yc.user_leagues()
+    leagues = yc.user_leagues(game_key=game_key)
     if not leagues:
-        return RedirectResponse(f"{FRONTEND_BASE}/connect?error=no_leagues")
+        return RedirectResponse(f"{FRONTEND_BASE}/connect?error=no_leagues&sport={game_key}")
 
     # For v1 we auto-pick the first NBA league.
     league = leagues[0]

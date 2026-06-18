@@ -20,8 +20,9 @@ AUTH_URL = "https://api.login.yahoo.com/oauth2/request_auth"
 TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token"
 FANTASY_BASE = "https://fantasysports.yahooapis.com/fantasy/v2"
 
-# Yahoo game key for NBA. Changes each season; "nba" is the alias.
-NBA_GAME_KEY = "nba"
+# Yahoo game key. "nba" for production; switch to "mlb"/"nfl"/"nhl" to test
+# during the NBA offseason. Configurable via YAHOO_GAME_KEY env var.
+GAME_KEY = getattr(settings, "yahoo_game_key", "nba") or "nba"
 
 
 def authorization_url(state: str = "") -> str:
@@ -124,9 +125,10 @@ class YahooFantasyClient:
 
     # ---- High-level queries ------------------------------------------------
 
-    def user_leagues(self) -> list[dict]:
-        """Return the user's NBA fantasy leagues for the current season."""
-        data = self._get(f"users;use_login=1/games;game_keys={NBA_GAME_KEY}/leagues")
+    def user_leagues(self, game_key: str | None = None) -> list[dict]:
+        """Return the user's fantasy leagues for the current season."""
+        gk = game_key or GAME_KEY
+        data = self._get(f"users;use_login=1/games;game_keys={gk}/leagues")
         try:
             games = data["fantasy_content"]["users"]["0"]["user"][1]["games"]
             leagues_node = games["0"]["game"][1]["leagues"]
