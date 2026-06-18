@@ -16,26 +16,39 @@ from .scoring.engine import games_in_window, project_value, rank_waiver_adds
 from .scoring.matchups import compute_dvp
 from .scoring.projections import project_all
 from .scoring.scoring_systems import DEFAULT_POINTS_SCORING, league_from_config
+from .sports import get_sport
 from .scoring.types import GameLog, Injury, Player, Projection, ScheduledGame
 
-SAMPLE_DIR = Path(__file__).resolve().parents[1] / "sample_data"
+DATA_DIR = Path(__file__).resolve().parents[1]
+SAMPLE_DIR = DATA_DIR / "sample_data"        # NBA fixtures (default)
+MLB_DATA_DIR = DATA_DIR / "sample_data_mlb"   # MLB fixtures
 
 
 FIXTURE_FILES = ("teams", "players", "game_logs", "schedule", "injuries", "roster")
 
 
-def load_fixtures() -> dict:
-    """Load the real NBA fixtures, materializing them from stats.nba.com if absent.
+def load_fixtures(sport: str = "nba") -> dict:
+    """Load real fixtures for a sport, materializing from the API if absent."""
+    if sport == "mlb":
+        return _load_mlb_fixtures()
+    return _load_nba_fixtures()
 
-    The app always serves real data. On first use (or after the files are cleared)
-    this fetches a fresh dataset via app.data.nba_fixtures; subsequent calls read the
-    cached JSON. Refresh anytime with `python scripts/dump_real_fixtures.py`.
-    """
+
+def _load_nba_fixtures() -> dict:
+    """Load the real NBA fixtures, materializing them from stats.nba.com if absent."""
     if not (SAMPLE_DIR / "roster.json").exists():
         from .data.nba_fixtures import build_real_fixtures
-
         build_real_fixtures(SAMPLE_DIR)
     return {name: json.loads((SAMPLE_DIR / f"{name}.json").read_text())
+            for name in FIXTURE_FILES}
+
+
+def _load_mlb_fixtures() -> dict:
+    """Load real MLB fixtures, materializing from statsapi.mlb.com if absent."""
+    if not (MLB_DATA_DIR / "roster.json").exists():
+        from .data.mlb_fixtures import build_real_fixtures
+        build_real_fixtures(MLB_DATA_DIR)
+    return {name: json.loads((MLB_DATA_DIR / f"{name}.json").read_text())
             for name in FIXTURE_FILES}
 
 
@@ -127,14 +140,15 @@ def manual_recommendations(
     fixtures: dict | None = None,
     scoring_mode: str = "points",
     categories: list[str] | None = None,
+    sport: str = "nba",
 ) -> dict:
-    """Run the engine against a user-typed roster, using real NBA data for everything else.
+    """Run the engine against a user-typed roster, using real data for everything else.
 
     Free agents = every known player not on the roster. Unrecognized names are
     reported back so the frontend can flag them. ``fixtures`` may be injected (tests);
     it defaults to the real dataset.
     """
-    fx = fixtures if fixtures is not None else load_fixtures()
+    fx = fixtures if fixtures is not None else load_fixtures(sport)
     league = fx["roster"]
     roster_ids, unresolved = resolve_names(roster_names, fx["players"])
     drop_ids, drop_unresolved = resolve_names(droppable_names or [], fx["players"])
@@ -169,8 +183,8 @@ def manual_recommendations(
     }
 
 
-def sample_recommendations(scoring_mode: str = "points") -> dict:
-    fx = load_fixtures()
+def sample_recommendations(scoring_mode: str = "points", sport: str = "nba") -> dict:
+    fx = load_fixtures(sport)
     if scoring_mode == "categories":
         fx["roster"]["mode"] = "categories"
     return {
@@ -180,15 +194,17 @@ def sample_recommendations(scoring_mode: str = "points") -> dict:
     }
 
 
-def top_streamers(top_n: int = 30) -> dict:
+def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
     """Top streaming pickups this week ranked by absolute projected value.
 
     No roster required — this is the public, free, SEO-friendly page content.
     Returns the schedule density grid (games per team) and the ranked player list.
     """
-    fx = load_fixtures()
+    fx = load_fixtures(sport)
     cfg = fx["roster"]
     window = (cfg["week_start"], cfg["week_end"])
+    sport_cfg = get_sport(sport)
+    weights = dict(sport_cfg.default_points_scoring)
 
     players = {p["id"]: Player(p["id"], p["name"], p["team_id"], p["positions"])
                for p in fx["players"]}
@@ -203,8 +219,8 @@ def top_streamers(top_n: int = 30) -> dict:
     for p in players.values():
         players_by_team.setdefault(p.team_id, []).append(p)
 
-    projections = project_all(logs_by_player)
-    dvp = compute_dvp(all_logs)
+    projections = project_all(logs_by_player, weights)
+    dvp = compute_dvp(all_logs, weights)
 
     # Build team lookup and schedule density grid.
     teams_by_id = {t["id"]: t for t in fx["teams"]}

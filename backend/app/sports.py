@@ -77,8 +77,8 @@ MLB = SportConfig(
     name="MLB Baseball",
     icon="\u26be",
     active=True,
-    has_data=False,
-    note="In-season — data pipeline coming soon",
+    has_data=True,
+    note="In-season",
     positions=("C", "1B", "2B", "SS", "3B", "OF", "SP", "RP", "DH"),
     default_points_scoring={
         "h": 1.0, "r": 1.0, "hr": 4.0, "rbi": 1.0, "sb": 2.0,
