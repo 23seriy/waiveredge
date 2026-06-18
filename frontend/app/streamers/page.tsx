@@ -266,8 +266,8 @@ export default function StreamersPage() {
             Top Streamers This Week
           </h1>
           <p className="text-sm text-muted leading-relaxed max-w-2xl">
-            The best fantasy basketball streaming pickups ranked by projected value.
-            Schedule density × matchups × recent form — updated from real NBA data.
+            The best fantasy streaming pickups ranked by projected value.
+            Schedule density × matchups × recent form — real sports data, updated weekly.
           </p>
         </div>
 
@@ -337,7 +337,7 @@ export default function StreamersPage() {
       {/* Footer */}
       <footer className="border-t border-line mt-16 py-6">
         <p className="text-center text-xs text-muted">
-          WaiverEdge · Real NBA data via stats.nba.com · No logos or trademarks used
+          WaiverEdge · Real sports data · No logos or trademarks used
         </p>
       </footer>
     </div>

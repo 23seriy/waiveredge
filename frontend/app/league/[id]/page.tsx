@@ -208,7 +208,7 @@ export default function LeaguePage() {
       </main>
 
       <footer className="border-t border-line mt-16 py-6">
-        <p className="text-center text-xs text-muted">WaiverEdge · Real NBA data via stats.nba.com · No logos or trademarks used</p>
+        <p className="text-center text-xs text-muted">WaiverEdge · Real sports data · No logos or trademarks used</p>
       </footer>
     </div>
   );
