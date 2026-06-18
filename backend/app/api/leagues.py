@@ -133,10 +133,24 @@ def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     if not yahoo_roster:
         raise HTTPException(status_code=502, detail="Yahoo returned an empty roster.")
 
+    # Fetch actual free agents from the league.
+    yahoo_fas = yc.free_agents(conn.league_id, max_players=500)
+    if yc.tokens_refreshed:
+        conn.oauth_tokens = yc.current_tokens
+
     sport = _sport_for_league(conn.league_id)
     fx = load_fixtures(sport)
-    names = [p["name"] for p in yahoo_roster]
-    resolved_ids, unresolved = resolve_names(names, fx["players"])
+    roster_names = [p["name"] for p in yahoo_roster]
+    resolved_ids, unresolved = resolve_names(roster_names, fx["players"])
+
+    # Resolve free agent names to player IDs.
+    fa_names = [p["name"] for p in yahoo_fas]
+    fa_ids, _ = resolve_names(fa_names, fx["players"])
+
+    # Store FA IDs in the connection's scoring_json for the recs endpoint.
+    scoring_data = dict(conn.scoring_json or {})
+    scoring_data["free_agent_ids"] = fa_ids
+    conn.scoring_json = scoring_data
 
     db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).delete()
     yahoo_by_name = {p["name"]: p for p in yahoo_roster}
@@ -148,7 +162,12 @@ def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
         db.add(RosterEntry(connection_id=conn.id, player_id=pid, slot=slot, droppable=True))
     db.commit()
 
-    return {"synced": len(resolved_ids), "unresolved": unresolved, "roster_size": len(resolved_ids)}
+    return {
+        "synced": len(resolved_ids),
+        "unresolved": unresolved,
+        "roster_size": len(resolved_ids),
+        "free_agents_found": len(fa_ids),
+    }
 
 
 @router.get("/{connection_id}/recs")
@@ -164,7 +183,13 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
     cfg = fx["roster"]
 
     roster_ids = {r.player_id for r in roster_entries}
-    free_agents = [p["id"] for p in fx["players"] if p["id"] not in roster_ids]
+    # Use actual league free agents if available (from last sync), else fall back to all non-rostered.
+    scoring_data = conn.scoring_json or {}
+    stored_fa_ids = scoring_data.get("free_agent_ids")
+    if stored_fa_ids:
+        free_agents = [pid for pid in stored_fa_ids if pid not in roster_ids]
+    else:
+        free_agents = [p["id"] for p in fx["players"] if p["id"] not in roster_ids]
     droppable = [r.player_id for r in roster_entries if r.droppable]
 
     scoring = conn.scoring_json or {}

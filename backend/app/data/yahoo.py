@@ -223,22 +223,36 @@ class YahooFantasyClient:
         except (KeyError, IndexError, TypeError):
             return []
 
-    def free_agents(self, league_key: str, count: int = 50) -> list[dict]:
-        """Top available free agents in the league."""
-        data = self._get(f"league/{league_key}/players;status=FA;count={count}")
-        try:
-            players = data["fantasy_content"]["league"][1]["players"]
-            result = []
-            for i in range(players["count"]):
-                p_data = players[str(i)]["player"][0]
-                name, position = "", ""
-                for item in p_data:
-                    if isinstance(item, dict):
-                        if "name" in item:
-                            name = item["name"].get("full", "")
-                        if "display_position" in item:
-                            position = item["display_position"]
-                result.append({"name": name, "position": position})
-            return result
-        except (KeyError, IndexError, TypeError):
-            return []
+    def free_agents(self, league_key: str, max_players: int = 500) -> list[dict]:
+        """Fetch available free agents in the league (paginated, up to max_players)."""
+        result: list[dict] = []
+        start = 0
+        page_size = 250  # Yahoo max per request
+        while start < max_players:
+            batch_size = min(page_size, max_players - start)
+            try:
+                data = self._get(
+                    f"league/{league_key}/players;status=A;start={start};count={batch_size}")
+                players = data["fantasy_content"]["league"][1]["players"]
+                if not isinstance(players, dict):
+                    break
+                count = players.get("count", 0)
+                if count == 0:
+                    break
+                for i in range(count):
+                    p_data = players[str(i)]["player"][0]
+                    name, position = "", ""
+                    for item in p_data:
+                        if isinstance(item, dict):
+                            if "name" in item:
+                                name = item["name"].get("full", "")
+                            if "display_position" in item:
+                                position = item["display_position"]
+                    if name:
+                        result.append({"name": name, "position": position})
+                if count < batch_size:
+                    break  # No more pages
+                start += count
+            except (KeyError, IndexError, TypeError):
+                break
+        return result
