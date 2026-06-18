@@ -19,5 +19,20 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:3000"
 
+    # Yahoo OAuth 2.0 (register at https://developer.yahoo.com/apps/)
+    yahoo_client_id: str = ""
+    yahoo_client_secret: str = ""
+    yahoo_redirect_uri: str = "http://localhost:8000/api/auth/yahoo/callback"
+    yahoo_game_key: str = "nba"  # nba | mlb | nfl | nhl — switch for offseason testing
+
+    # App secret for signing session cookies (generate a random one for production).
+    app_secret: str = "change-me-in-production"
+
+    # Stripe (https://dashboard.stripe.com/apikeys)
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_pro_monthly_price_id: str = ""     # price ID for $8/mo
+    stripe_pro_season_price_id: str = ""      # price ID for $39/season
+
 
 settings = Settings()

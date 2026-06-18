@@ -13,9 +13,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from .api.auth import router as auth_router
+from .api.billing import router as billing_router
+from .api.leagues import router as leagues_router
 from .config import settings
 from .recommendations import manual_recommendations, sample_recommendations, top_streamers
 from .scoring.scoring_systems import CATEGORY_META, NINE_CAT
+from .sports import SPORTS, get_sport
 
 
 class ManualRosterRequest(BaseModel):
@@ -31,8 +35,12 @@ class ManualRosterRequest(BaseModel):
         default_factory=lambda: list(NINE_CAT),
         description="Active categories for category mode (ignored in points mode). "
                     "Defaults to the standard 9-cat set.")
+    sport: str = Field(default="nba", description="Sport key (nba, mlb).")
 
 app = FastAPI(title="WaiverEdge API", version="0.1.0")
+app.include_router(auth_router)
+app.include_router(billing_router)
+app.include_router(leagues_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,21 +50,38 @@ app.add_middleware(
 )
 
 
+@app.get("/api/sports")
+def list_sports() -> list[dict]:
+    """Available sports with their configuration and status."""
+    return [
+        {"key": s.key, "name": s.name, "icon": s.icon, "active": s.active,
+         "has_data": s.has_data, "positions": s.positions, "note": s.note}
+        for s in SPORTS.values()
+    ]
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": "waiveredge", "has_api_key": bool(settings.balldontlie_api_key)}
 
 
 @app.get("/api/recommendations/sample")
-def recommendations_sample(mode: Literal["points", "categories"] = "points") -> dict:
+def recommendations_sample(mode: Literal["points", "categories"] = "points", sport: str = "nba") -> dict:
     """Ranked waiver adds for the sample roster (runs the live scoring engine)."""
+    sc = get_sport(sport)
+    if not sc.has_data:
+        raise HTTPException(status_code=501, detail=f"{sc.name} data pipeline not yet available.")
     return sample_recommendations(scoring_mode=mode)
 
 
 @app.post("/api/recommendations/manual")
 def recommendations_manual(req: ManualRosterRequest) -> dict:
     """Ranked waiver adds for a user-typed roster (bridge to per-user before OAuth)."""
-    cats = [c for c in req.categories if c in CATEGORY_META] if req.scoring_mode == "categories" else None
+    sc = get_sport(req.sport)
+    if not sc.has_data:
+        raise HTTPException(status_code=501, detail=f"{sc.name} data pipeline not yet available.")
+    cat_meta = sc.category_meta
+    cats = [c for c in req.categories if c in cat_meta] if req.scoring_mode == "categories" else None
     result = manual_recommendations(req.roster, req.droppable, scoring_mode=req.scoring_mode, categories=cats)
     if result["resolved_count"] == 0:
         raise HTTPException(
@@ -68,9 +93,12 @@ def recommendations_manual(req: ManualRosterRequest) -> dict:
 
 
 @app.get("/api/streamers")
-def streamers(top: int = 30) -> dict:
+def streamers(top: int = 30, sport: str = "nba") -> dict:
     """Top streaming pickups this week + schedule density grid. No auth required."""
-    return top_streamers(top_n=min(top, 50))
+    sc = get_sport(sport)
+    if not sc.has_data:
+        raise HTTPException(status_code=501, detail=f"{sc.name} data pipeline not yet available.")
+    return {**top_streamers(top_n=min(top, 50)), "sport": sport}
 
 
 # TODO: @app.get("/api/recommendations/{connection_id}") — DB-backed, per-user.

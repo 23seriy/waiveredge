@@ -9,13 +9,15 @@
 
 ## TL;DR
 
-- **What:** a fantasy-basketball "move-finder" SaaS. It tells a manager exactly which
+- **What:** a fantasy sports "move-finder" SaaS — starting with **NBA basketball**
+  and expanding to **MLB baseball**. It tells a manager exactly which
   waiver/streaming move to make *right now* for *their* roster, by fusing schedule
   density × matchups × injuries — the cross-referencing serious players do by hand
   across 3+ tools today.
 - **Why it earns:** fantasy managers are a **proven paying audience** with weekly,
-  high-engagement need during a 7-month season. Competing tools already charge
-  $5–15/mo, which validates willingness-to-pay.
+  high-engagement need during lengthy seasons (NBA Oct–Apr, MLB Apr–Oct — nearly
+  year-round coverage). Competing tools already charge $5–15/mo, which validates
+  willingness-to-pay.
 - **How it earns:** primarily a **freemium subscription** ($8/mo or a discounted
   season pass), with the free tier as a cheap acquisition funnel. Secondary stacked
   revenue: DFS affiliate referrals, a data/API tier for creators, and off-season
@@ -29,7 +31,8 @@
 ## Part 1 — The Idea
 
 ### The problem
-Winning season-long fantasy basketball is driven by three things that change daily:
+Winning season-long fantasy sports (basketball, baseball, and beyond) is driven
+by three things that change daily:
 
 1. **Schedule density** — a player on a team with 4 games this week out-produces an
    equal player whose team plays 2. "Streaming" players for extra games is the single
@@ -55,10 +58,13 @@ replacement) so the user doesn't have to. **The engine already exists and is val
 on real NBA data** (see [validation](#proof-its-real)).
 
 ### Who it's for
-**Serious season-long fantasy basketball managers** — head-to-head and roto players in
-competitive leagues (money leagues, long-running friend leagues, multi-team managers).
-This is a deliberately *narrow, high-intent* niche: they have a recurring weekly job,
-real stakes, and a demonstrated habit of paying for an edge.
+**Serious season-long fantasy sports managers** — starting with basketball (head-to-head
+and roto) and expanding to baseball. Competitive leagues (money leagues, long-running
+friend leagues, multi-team managers). This is a deliberately *narrow, high-intent*
+niche: they have a recurring weekly job, real stakes, and a demonstrated habit of
+paying for an edge. Multi-sport coverage (NBA Oct–Apr + MLB Apr–Oct) creates
+**near year-round engagement**, reducing seasonality — the biggest risk in a
+single-sport tool.
 
 ### Why now
 - LLMs make per-recommendation **natural-language rationales** and **injury-report
@@ -204,7 +210,8 @@ economics work:
 1. **r/fantasybball + fantasy Discords/Twitter** — build in public, post genuinely
    useful weekly analysis, let the free tool spread.
 2. **SEO free tools** — a public "best streamers this week" page and per-week pages
-   ("fantasy basketball streaming Week 12") capture recurring search intent. The free
+   ("fantasy basketball streaming Week 12", "MLB waiver wire Week 8") capture
+   recurring search intent across both sports. The free
    schedule grid is the SEO magnet.
 3. **Shareability** — every recommendation/action-list card is screenshot-friendly for
    group chats and X.

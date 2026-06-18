@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this product is
 
-WaiverEdge is a fantasy basketball "do this now" waiver action list. The scoring
-core fuses **schedule density × DvP matchup × injury role-bump × availability** into
-a single value-over-replacement number per candidate, then ranks free agents against
-*your* roster. The README's "The model" section is the spec — keep changes
-explainable and deterministic (no ML in v1).
+WaiverEdge is a fantasy sports "do this now" waiver action list — currently
+supporting **NBA basketball** (live) and **MLB baseball** (architecture ready,
+data pipeline pending). The scoring core fuses **schedule density × DvP matchup ×
+injury role-bump × availability** into a single value-over-replacement number per
+candidate, then ranks free agents against *your* roster. The sport registry
+(`app/sports.py`) makes adding new sports config-only. The README's "The model"
+section is the spec — keep changes explainable and deterministic (no ML in v1).
 
 ## Commands
 

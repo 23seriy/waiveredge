@@ -1,0 +1,215 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import {
+  ArrowUpDown,
+  Calendar,
+  ChevronDown,
+  Flame,
+  Loader2,
+  RefreshCw,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
+
+type Recommendation = {
+  add_player_id: number;
+  add_name: string;
+  add_position: string;
+  add_value: number;
+  drop_name: string | null;
+  n_games: number;
+  soft_matchups: number;
+  marginal: number;
+  rationale: string;
+  total_z: number | null;
+  per_cat_z: Record<string, number> | null;
+  helps: string[] | null;
+};
+
+type LeagueInfo = {
+  id: number;
+  platform: string;
+  league_id: string;
+  team_key: string;
+  roster: { player_id: number; slot: string; droppable: boolean }[];
+};
+
+type RecsPayload = {
+  connection_id: number;
+  week: { start: string; end: string };
+  scoring_mode: string;
+  recommendations: Recommendation[];
+};
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const CAT_LABELS: Record<string, string> = {
+  fg_pct: "FG%", ft_pct: "FT%", fg3m: "3PM", pts: "PTS", reb: "REB",
+  ast: "AST", stl: "STL", blk: "BLK", turnover: "TO",
+};
+const NINE_CAT = ["fg_pct", "ft_pct", "fg3m", "pts", "reb", "ast", "stl", "blk", "turnover"];
+
+function ZBadge({ cat, z }: { cat: string; z: number }) {
+  const label = CAT_LABELS[cat] ?? cat;
+  const color = z > 0.3 ? "text-pos" : z < -0.3 ? "text-neg" : "text-muted";
+  return (
+    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-mono ${color} bg-surface`}>
+      {label} {z >= 0 ? "+" : ""}{z.toFixed(1)}
+    </span>
+  );
+}
+
+function RecCard({ rec, rank, mode }: { rec: Recommendation; rank: number; mode: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isCategory = mode === "categories" && rec.per_cat_z;
+  const marginalStr = mode === "categories"
+    ? `${rec.marginal >= 0 ? "+" : ""}${rec.marginal.toFixed(1)}z`
+    : `${rec.marginal >= 0 ? "+" : ""}${rec.marginal.toFixed(1)}`;
+
+  return (
+    <div className="group rounded-xl border border-line bg-card p-4 transition-colors hover:border-accent/40">
+      <div className="flex gap-4 items-start">
+        <div className="flex flex-col items-center shrink-0 w-10">
+          <span className="text-xs text-muted font-medium">#{rank}</span>
+          <span className={`text-lg font-bold tabular-nums ${rec.marginal >= 0 ? "text-pos" : "text-neg"}`}>{marginalStr}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h3 className="text-base font-semibold text-gray-100">{rec.add_name}</h3>
+            <span className="text-sm text-muted">{rec.add_position}</span>
+            {rec.helps && rec.helps.length > 0 && (
+              <span className="text-xs bg-pos/15 text-pos rounded-full px-2 py-0.5 font-medium">helps weak cats</span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-1.5 text-sm text-muted">
+            <span className="flex items-center gap-1"><Calendar size={12} /> {rec.n_games} game{rec.n_games !== 1 ? "s" : ""}</span>
+            {rec.soft_matchups > 0 && <span className="flex items-center gap-1"><TrendingUp size={12} /> {rec.soft_matchups} soft</span>}
+            {rec.drop_name && <span>drop <span className="text-accent font-medium">{rec.drop_name}</span></span>}
+          </div>
+          {isCategory && rec.per_cat_z && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {NINE_CAT.filter((c) => c in rec.per_cat_z!).map((cat) => <ZBadge key={cat} cat={cat} z={rec.per_cat_z![cat]} />)}
+            </div>
+          )}
+          <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 mt-2 text-xs text-muted hover:text-gray-300 transition-colors">
+            <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+            {expanded ? "Less" : "Details"}
+          </button>
+          {expanded && <p className="mt-1.5 text-sm text-muted leading-relaxed">{rec.rationale}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function LeaguePage() {
+  const params = useParams();
+  const connectionId = params.id as string;
+  const [league, setLeague] = useState<LeagueInfo | null>(null);
+  const [recs, setRecs] = useState<RecsPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [lr, rr] = await Promise.all([
+        fetch(`${API_BASE}/api/leagues/${connectionId}`),
+        fetch(`${API_BASE}/api/leagues/${connectionId}/recs`),
+      ]);
+      if (!lr.ok) throw new Error(`League fetch failed (${lr.status})`);
+      setLeague((await lr.json()) as LeagueInfo);
+      if (rr.ok) setRecs((await rr.json()) as RecsPayload);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }, [connectionId]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  async function syncRoster() {
+    setSyncing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/sync`, { method: "POST" });
+      if (!res.ok) { const b = await res.json().catch(() => null); throw new Error(b?.detail || `Sync failed (${res.status})`); }
+      await loadData();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  const mode = recs?.scoring_mode ?? "points";
+
+  return (
+    <div className="min-h-screen bg-bg">
+      <header className="border-b border-line bg-card/60 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center"><Zap size={16} className="text-bg" /></div>
+            <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/streamers" className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors"><Flame size={14} /> Streamers</Link>
+            {mode === "categories" && <span className="flex items-center gap-1 text-xs text-accent bg-surface rounded-md px-2 py-1"><ArrowUpDown size={12} /> 9-Cat</span>}
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-4 py-8">
+        {loading && <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-accent" /><span className="ml-2 text-muted">Loading…</span></div>}
+        {error && <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6"><p className="text-sm text-neg">{error}</p></div>}
+
+        {league && !loading && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-xl font-bold tracking-tight">Your League</h1>
+                <p className="text-xs text-muted mt-0.5">{league.platform.toUpperCase()} · {league.league_id}{league.roster.length > 0 && ` · ${league.roster.length} players`}</p>
+              </div>
+              <button onClick={syncRoster} disabled={syncing} className="flex items-center gap-1.5 rounded-lg bg-surface border border-line px-3 py-1.5 text-sm text-muted hover:text-accent hover:border-accent/40 transition-colors disabled:opacity-40">
+                <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : "Sync roster"}
+              </button>
+            </div>
+
+            {league.roster.length === 0 && (
+              <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center mb-8">
+                <p className="text-sm text-muted mb-3">No roster synced yet.</p>
+                <button onClick={syncRoster} disabled={syncing} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90 disabled:opacity-40">
+                  <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> Sync from Yahoo
+                </button>
+              </div>
+            )}
+
+            {recs && recs.recommendations.length > 0 && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-base font-semibold">Waiver Action List</h2>
+                    <p className="text-xs text-muted mt-0.5">Week of {recs.week.start} to {recs.week.end}{recs.scoring_mode === "categories" && <> · <span className="text-accent">9-Cat</span></>}</p>
+                  </div>
+                  <span className="text-xs text-muted">{recs.recommendations.length} add{recs.recommendations.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="space-y-3">{recs.recommendations.map((r, i) => <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} />)}</div>
+              </>
+            )}
+            {recs && recs.recommendations.length === 0 && league.roster.length > 0 && (
+              <p className="text-sm text-muted text-center py-12">No free agents outrank your roster this week.</p>
+            )}
+          </>
+        )}
+      </main>
+
+      <footer className="border-t border-line mt-16 py-6">
+        <p className="text-center text-xs text-muted">WaiverEdge · Real sports data · No logos or trademarks used</p>
+      </footer>
+    </div>
+  );
+}

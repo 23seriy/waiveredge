@@ -92,6 +92,24 @@ def league_from_config(cfg: dict | None) -> LeagueScoring:
     return LeagueScoring(mode="points", weights=cfg.get("weights") or dict(DEFAULT_POINTS_SCORING))
 
 
+def league_from_sport_config(cfg: dict | None, sport_cfg: object) -> LeagueScoring:
+    """Build a LeagueScoring using a SportConfig for defaults (sport-aware).
+
+    Falls back to the sport's defaults when the request/fixture config is missing
+    or incomplete. ``sport_cfg`` is a SportConfig from app.sports.
+    """
+    defaults_weights = getattr(sport_cfg, "default_points_scoring", DEFAULT_POINTS_SCORING)
+    defaults_cats = getattr(sport_cfg, "default_categories", NINE_CAT)
+    cat_meta = getattr(sport_cfg, "category_meta", CATEGORY_META)
+
+    if not cfg:
+        return LeagueScoring(weights=dict(defaults_weights), categories=list(defaults_cats))
+    if cfg.get("mode") == "categories":
+        cats = [c for c in (cfg.get("categories") or defaults_cats) if c in cat_meta]
+        return LeagueScoring(mode="categories", categories=cats or list(defaults_cats))
+    return LeagueScoring(mode="points", weights=cfg.get("weights") or dict(defaults_weights))
+
+
 # NOTES / roadmap:
 #   - Per-league weight/category overrides arrive via league_connections.scoring_json
 #     once Yahoo OAuth import is wired up (see app/data/ingest.py).

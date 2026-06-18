@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 
 export const metadata = {
-  title: "Top Fantasy Basketball Streamers This Week | WaiverEdge",
+  title: "Top Fantasy Streamers This Week | WaiverEdge",
   description:
-    "Best fantasy basketball streaming pickups ranked by projected value. " +
-    "Schedule density × matchups × recent form — real NBA data, updated weekly.",
+    "Best fantasy sports streaming pickups ranked by projected value. " +
+    "NBA basketball and MLB baseball — schedule density × matchups × recent form.",
   openGraph: {
     title: "Top Streamers This Week — WaiverEdge",
-    description: "Best NBA streaming pickups ranked by projected value this week.",
+    description: "Best fantasy streaming pickups ranked by projected value this week.",
   },
 };
 
