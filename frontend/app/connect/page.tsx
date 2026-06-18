@@ -59,16 +59,37 @@ function SportCard({ sport }: { sport: Sport }) {
   );
 }
 
+type ESPNTeam = { id: number; name: string };
+
 function ESPNConnectForm() {
   const [leagueId, setLeagueId] = useState("");
   const [espnSport, setEspnSport] = useState("mlb");
   const [espnS2, setEspnS2] = useState("");
   const [swid, setSwid] = useState("");
+  const [teams, setTeams] = useState<ESPNTeam[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
-  async function handleConnect() {
+  async function fetchTeams() {
     if (!leagueId.trim()) return;
+    setLoadingTeams(true);
+    setResult(null);
+    setTeams([]);
+    setSelectedTeam(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/espn/teams?league_id=${leagueId}&season=2026&sport=${espnSport}`);
+      if (!res.ok) { const b = await res.json().catch(() => null); setResult(b?.detail || "Failed to load teams"); return; }
+      const data = (await res.json()) as ESPNTeam[];
+      setTeams(data);
+      if (data.length === 0) setResult("No teams found in this league.");
+    } catch { setResult("Could not reach the API."); }
+    finally { setLoadingTeams(false); }
+  }
+
+  async function handleConnect() {
+    if (!leagueId.trim() || selectedTeam === null) return;
     setLoading(true);
     setResult(null);
     try {
@@ -79,22 +100,16 @@ function ESPNConnectForm() {
           league_id: parseInt(leagueId),
           season: 2026,
           sport: espnSport,
+          team_id: selectedTeam,
           espn_s2: espnS2,
           swid,
         }),
       });
-      if (!res.ok) {
-        const b = await res.json().catch(() => null);
-        setResult(b?.detail || `Failed (${res.status})`);
-        return;
-      }
+      if (!res.ok) { const b = await res.json().catch(() => null); setResult(b?.detail || `Failed (${res.status})`); return; }
       const data = await res.json();
       window.location.href = `/league/${data.connection_id}`;
-    } catch {
-      setResult("Could not reach the API.");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setResult("Could not reach the API."); }
+    finally { setLoading(false); }
   }
 
   return (
@@ -105,8 +120,8 @@ function ESPNConnectForm() {
           <input
             type="text"
             value={leagueId}
-            onChange={(e) => setLeagueId(e.target.value)}
-            placeholder="e.g. 233345"
+            onChange={(e) => { setLeagueId(e.target.value); setTeams([]); setSelectedTeam(null); }}
+            placeholder="e.g. 2052775362"
             className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent"
           />
         </div>
@@ -114,7 +129,7 @@ function ESPNConnectForm() {
           <label className="text-xs text-muted block mb-1">Sport</label>
           <select
             value={espnSport}
-            onChange={(e) => setEspnSport(e.target.value)}
+            onChange={(e) => { setEspnSport(e.target.value); setTeams([]); setSelectedTeam(null); }}
             className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent"
           >
             <option value="mlb">⚾ MLB Baseball</option>
@@ -122,34 +137,63 @@ function ESPNConnectForm() {
           </select>
         </div>
       </div>
+
+      {/* Step 1: Find teams */}
+      {teams.length === 0 && (
+        <button
+          onClick={fetchTeams}
+          disabled={loadingTeams || !leagueId.trim()}
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-surface border border-line px-4 py-2 text-sm font-medium text-gray-200 hover:border-accent/40 transition-colors disabled:opacity-40"
+        >
+          {loadingTeams ? <><Loader2 size={14} className="animate-spin" /> Finding teams…</> : "Find teams in this league"}
+        </button>
+      )}
+
+      {/* Step 2: Pick your team */}
+      {teams.length > 0 && (
+        <div>
+          <label className="text-xs text-muted block mb-1">Select your team</label>
+          <div className="grid grid-cols-2 gap-2">
+            {teams.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setSelectedTeam(t.id)}
+                className={`text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  selectedTeam === t.id
+                    ? "border-accent bg-accent/10 text-gray-100"
+                    : "border-line bg-surface text-muted hover:border-accent/40"
+                }`}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <details className="text-xs text-muted">
         <summary className="cursor-pointer hover:text-accent">Private league? Add cookies (optional)</summary>
         <div className="mt-2 space-y-2">
-          <input
-            type="text"
-            value={espnS2}
-            onChange={(e) => setEspnS2(e.target.value)}
-            placeholder="espn_s2 cookie value"
-            className="w-full bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-accent"
-          />
-          <input
-            type="text"
-            value={swid}
-            onChange={(e) => setSwid(e.target.value)}
-            placeholder="SWID cookie value"
-            className="w-full bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-accent"
-          />
+          <input type="text" value={espnS2} onChange={(e) => setEspnS2(e.target.value)} placeholder="espn_s2 cookie value"
+            className="w-full bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-accent" />
+          <input type="text" value={swid} onChange={(e) => setSwid(e.target.value)} placeholder="SWID cookie value"
+            className="w-full bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-accent" />
           <p className="text-[10px] text-muted">Find these in your browser DevTools → Application → Cookies → espn.com</p>
         </div>
       </details>
+
       {result && <p className="text-sm text-neg">{result}</p>}
-      <button
-        onClick={handleConnect}
-        disabled={loading || !leagueId.trim()}
-        className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors disabled:opacity-40"
-      >
-        {loading ? <><Loader2 size={14} className="animate-spin" /> Connecting…</> : "Connect ESPN League"}
-      </button>
+
+      {/* Step 3: Connect */}
+      {selectedTeam !== null && (
+        <button
+          onClick={handleConnect}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors disabled:opacity-40"
+        >
+          {loading ? <><Loader2 size={14} className="animate-spin" /> Connecting…</> : "Connect ESPN League"}
+        </button>
+      )}
     </div>
   );
 }
