@@ -85,16 +85,27 @@ class ESPNFantasyClient:
         }
 
     def teams(self, league_id: int, season: int) -> list[dict]:
-        """Fetch all teams in the league."""
-        data = self.league_data(league_id, season, views=["mTeam"])
-        return [
-            {
+        """Fetch all teams in the league with roster previews for identification."""
+        data = self.league_data(league_id, season, views=["mTeam", "mRoster"])
+        result = []
+        for t in data.get("teams", []):
+            name = f"{t.get('location', '')} {t.get('nickname', '')}".strip()
+            abbrev = t.get("abbrev", "")
+            if not name:
+                name = f"Team {t['id']}" + (f" ({abbrev})" if abbrev else "")
+            # Include top roster players for identification.
+            entries = t.get("roster", {}).get("entries", [])
+            top_players = [
+                e.get("playerPoolEntry", {}).get("player", {}).get("fullName", "")
+                for e in entries[:4]
+            ]
+            result.append({
                 "id": t.get("id"),
-                "name": f"{t.get('location', '')} {t.get('nickname', '')}".strip() or f"Team {t['id']}",
-                "owner": t.get("owners", [None])[0] if t.get("owners") else None,
-            }
-            for t in data.get("teams", [])
-        ]
+                "name": name,
+                "abbrev": abbrev,
+                "top_players": [p for p in top_players if p],
+            })
+        return result
 
     def roster(self, league_id: int, season: int, team_id: int) -> list[dict]:
         """Fetch a specific team's roster."""

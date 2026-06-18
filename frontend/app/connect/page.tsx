@@ -59,7 +59,7 @@ function SportCard({ sport }: { sport: Sport }) {
   );
 }
 
-type ESPNTeam = { id: number; name: string };
+type ESPNTeam = { id: number; name: string; abbrev?: string; top_players?: string[] };
 
 function ESPNConnectForm() {
   const [leagueId, setLeagueId] = useState("");
@@ -158,13 +158,18 @@ function ESPNConnectForm() {
               <button
                 key={t.id}
                 onClick={() => setSelectedTeam(t.id)}
-                className={`text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+                className={`text-left rounded-lg border px-3 py-2.5 transition-colors ${
                   selectedTeam === t.id
                     ? "border-accent bg-accent/10 text-gray-100"
                     : "border-line bg-surface text-muted hover:border-accent/40"
                 }`}
               >
-                {t.name}
+                <span className="text-sm font-medium block">{t.name}</span>
+                {t.top_players && t.top_players.length > 0 && (
+                  <span className="text-[10px] text-muted block mt-0.5">
+                    {t.top_players.join(", ")}
+                  </span>
+                )}
               </button>
             ))}
           </div>
