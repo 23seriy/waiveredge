@@ -92,6 +92,8 @@ class User(Base):
     tier: Mapped[str] = mapped_column(String(16), default="free")  # free | pro
     stripe_customer_id: Mapped[str | None] = mapped_column(String(64))
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(64))
+    alert_email: Mapped[bool] = mapped_column(Boolean, default=True)
+    alert_push: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -105,6 +107,24 @@ class LeagueConnection(Base):
     team_key: Mapped[str | None] = mapped_column(String(64))
     scoring_json: Mapped[dict] = mapped_column(JSONB, default=dict)
     oauth_tokens: Mapped[dict | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class InjuryAlert(Base):
+    """A detected injury change + the resulting pickup opportunity."""
+    __tablename__ = "injury_alerts"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    connection_id: Mapped[int] = mapped_column(ForeignKey("league_connections.id"), index=True)
+    sport: Mapped[str] = mapped_column(String(8), default="nba")
+    injured_player_name: Mapped[str] = mapped_column(String(128))
+    injured_player_id: Mapped[int | None] = mapped_column(Integer)
+    injury_status: Mapped[str] = mapped_column(String(32))
+    injury_note: Mapped[str | None] = mapped_column(String(256))
+    pickup_player_name: Mapped[str | None] = mapped_column(String(128))
+    pickup_player_id: Mapped[int | None] = mapped_column(Integer)
+    pickup_marginal: Mapped[float | None] = mapped_column(Numeric(8, 2))
+    pickup_rationale: Mapped[str | None] = mapped_column(String(512))
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
