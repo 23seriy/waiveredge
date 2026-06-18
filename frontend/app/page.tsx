@@ -463,7 +463,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-line mt-16 py-6">
         <p className="text-center text-xs text-muted">
-          WaiverEdge &middot; Real NBA data via stats.nba.com &middot; No logos or trademarks used
+          WaiverEdge &middot; Real sports data &middot; No logos or trademarks used
         </p>
       </footer>
     </div>
