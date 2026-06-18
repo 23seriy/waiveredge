@@ -47,13 +47,25 @@ def get_league(connection_id: int, db: Session = Depends(get_db)) -> dict:
 def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     """Refresh the roster from Yahoo and persist it."""
     conn = _get_connection(connection_id, db)
-    if conn.platform != "yahoo" or not conn.team_key:
-        raise HTTPException(status_code=400, detail="Cannot sync: not a Yahoo connection or missing team_key.")
+    if conn.platform != "yahoo":
+        raise HTTPException(status_code=400, detail="Cannot sync: not a Yahoo connection.")
     if not conn.oauth_tokens:
         raise HTTPException(status_code=400, detail="No OAuth tokens on this connection.")
 
     yc = YahooFantasyClient(conn.oauth_tokens)
-    yahoo_roster = yc.roster(conn.team_key)
+
+    # If team_key was missing from the initial OAuth callback, try to find it now.
+    team_key = conn.team_key
+    if not team_key and conn.league_id:
+        team_key = yc.my_team_key(conn.league_id)
+        if team_key:
+            conn.team_key = team_key
+            db.commit()
+    if not team_key:
+        raise HTTPException(status_code=400, detail="Could not determine your team in this league. "
+                            "You may not be a manager in this league.")
+
+    yahoo_roster = yc.roster(team_key)
     if yc.tokens_refreshed:
         conn.oauth_tokens = yc.current_tokens
         db.commit()

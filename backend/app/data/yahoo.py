@@ -178,12 +178,25 @@ class YahooFantasyClient:
         try:
             teams = data["fantasy_content"]["league"][1]["teams"]
             for i in range(teams["count"]):
-                team = teams[str(i)]["team"][0]
-                for item in team:
-                    if isinstance(item, dict) and item.get("is_owned_by_current_login") == "1":
-                        for k in team:
-                            if isinstance(k, dict) and "team_key" in k:
-                                return k["team_key"]
+                team_node = teams[str(i)]["team"]
+                # team_node is a list of [list-of-dicts, ...]; flatten and search.
+                is_mine = False
+                found_key = None
+                for part in team_node:
+                    if isinstance(part, list):
+                        for item in part:
+                            if isinstance(item, dict):
+                                if item.get("is_owned_by_current_login") == "1":
+                                    is_mine = True
+                                if "team_key" in item:
+                                    found_key = item["team_key"]
+                    elif isinstance(part, dict):
+                        if part.get("is_owned_by_current_login") == "1":
+                            is_mine = True
+                        if "team_key" in part:
+                            found_key = part["team_key"]
+                if is_mine and found_key:
+                    return found_key
             return None
         except (KeyError, IndexError, TypeError):
             return None
