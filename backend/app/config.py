@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     yahoo_client_id: str = ""
     yahoo_client_secret: str = ""
     yahoo_redirect_uri: str = "http://localhost:8000/api/auth/yahoo/callback"
+    yahoo_game_key: str = "nba"  # nba | mlb | nfl | nhl — switch for offseason testing
 
     # App secret for signing session cookies (generate a random one for production).
     app_secret: str = "change-me-in-production"

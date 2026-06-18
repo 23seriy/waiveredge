@@ -27,6 +27,9 @@ npm-debug.log*
 .idea/
 .vscode/
 
+# Local SSL certs (for Yahoo OAuth dev)
+*.pem
+
 # Data: the real fixtures are reproducible via scripts/dump_real_fixtures.py
 # (and re-materialized by the app on demand), so keep the JSON out of git.
 backend/sample_data/*.json
