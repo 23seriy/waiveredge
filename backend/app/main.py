@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from .api.alerts import router as alerts_router
 from .api.auth import router as auth_router
 from .api.billing import router as billing_router
+from .api.espn import router as espn_router
 from .api.leagues import router as leagues_router
 from .config import settings
 from .recommendations import manual_recommendations, sample_recommendations, top_streamers
@@ -42,6 +43,7 @@ app = FastAPI(title="WaiverEdge API", version="0.1.0")
 app.include_router(alerts_router)
 app.include_router(auth_router)
 app.include_router(billing_router)
+app.include_router(espn_router)
 app.include_router(leagues_router)
 
 app.add_middleware(

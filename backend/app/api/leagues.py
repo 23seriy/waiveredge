@@ -60,9 +60,12 @@ def _yahoo_scoring_weights(scoring_json: dict | None) -> dict[str, float] | None
 
 
 def _sport_for_league(league_id: str | None) -> str:
-    """Derive sport from Yahoo league_id (e.g. '469.l.233345' → 'mlb')."""
+    """Derive sport from league_id. Supports Yahoo (469.l.233345) and ESPN (espn-mlb-123456)."""
     if not league_id:
         return "nba"
+    if league_id.startswith("espn-"):
+        parts = league_id.split("-")
+        return parts[1] if len(parts) >= 3 else "nba"
     game_id = league_id.split(".")[0]
     if game_id in _YAHOO_MLB_GAMES:
         return "mlb"
