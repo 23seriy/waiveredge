@@ -23,6 +23,42 @@ _YAHOO_MLB_GAMES = {"469", "454", "439", "422", "404", "388", "370", "357", "346
 _YAHOO_NBA_GAMES = {"418", "428", "410", "395", "375", "364", "353", "340"}
 
 
+# Yahoo stat IDs → our fixture stat keys. Covers both hitting and pitching.
+_YAHOO_STAT_MAP: dict[str, str] = {
+    "7": "r", "8": "h", "9": "h",     # runs, hits, singles (count as hits)
+    "10": "h", "11": "h",              # doubles, triples (count as hits)
+    "12": "hr", "13": "rbi", "16": "sb",
+    "18": "bb", "20": "bb",            # walks, HBP (count as BB for fantasy)
+    "21": "k_hitting",                  # batter strikeouts
+    "28": "w", "32": "sv",
+    "33": "ip",                         # outs → rough IP proxy (outs/3)
+    "34": "ha", "37": "er",
+    "39": "bba", "41": "bba",          # pitcher walks, HBP → walks against
+    "42": "k_pitching",
+    "50": "ip",
+}
+
+
+def _yahoo_scoring_weights(scoring_json: dict | None) -> dict[str, float] | None:
+    """Build fantasy point weights from Yahoo league scoring categories."""
+    if not scoring_json:
+        return None
+    categories = scoring_json.get("categories", [])
+    if not categories:
+        return None
+    weights: dict[str, float] = {}
+    for cat in categories:
+        mod = cat.get("modifier", 0)
+        if mod == 0:
+            continue
+        stat_id = str(cat.get("stat_id", ""))
+        our_key = _YAHOO_STAT_MAP.get(stat_id)
+        if our_key:
+            # Accumulate — some Yahoo stats map to the same key (e.g. 1B/2B/3B → h)
+            weights[our_key] = weights.get(our_key, 0) + mod
+    return weights if weights else None
+
+
 def _sport_for_league(league_id: str | None) -> str:
     """Derive sport from Yahoo league_id (e.g. '469.l.233345' → 'mlb')."""
     if not league_id:
@@ -135,10 +171,13 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
     scoring_type = scoring.get("scoring_type", "")
     mode = "categories" if scoring_type in ("head", "roto") else "points"
 
+    # Use the Yahoo league's actual scoring weights when available.
+    yahoo_weights = _yahoo_scoring_weights(scoring)
+
     fx["roster"] = {
         "week_start": cfg["week_start"],
         "week_end": cfg["week_end"],
-        "scoring": cfg.get("scoring"),
+        "scoring": yahoo_weights or cfg.get("scoring"),
         "mode": mode,
         "categories": None,
         "roster": [{"player_id": r.player_id, "slot": r.slot} for r in roster_entries],
