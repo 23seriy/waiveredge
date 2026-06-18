@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+type Sport = "nba" | "mlb";
 type ScoringMode = "points" | "categories";
 
 type Recommendation = {
@@ -44,9 +45,15 @@ type Payload = {
   resolved_count?: number;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
 const STORAGE_KEY = "waiveredge.roster.v1";
 const MODE_KEY = "waiveredge.mode.v1";
+const SPORT_KEY = "waiveredge.sport.v1";
+
+const SPORT_INFO: Record<Sport, { icon: string; name: string; hasData: boolean }> = {
+  nba: { icon: "\u{1F3C0}", name: "NBA", hasData: true },
+  mlb: { icon: "\u26BE", name: "MLB", hasData: false },
+};
 
 const CAT_LABELS: Record<string, string> = {
   fg_pct: "FG%", ft_pct: "FT%", fg3m: "3PM", pts: "PTS", reb: "REB",
@@ -67,6 +74,26 @@ const SAMPLE_ROSTER = [
   "Domantas Sabonis",
   "Scottie Barnes",
 ].join("\n");
+
+
+function SportToggle({ sport, onChange }: { sport: Sport; onChange: (s: Sport) => void }) {
+  return (
+    <div className="flex rounded-lg bg-surface p-1 gap-1">
+      {(["nba", "mlb"] as Sport[]).map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => onChange(s)}
+          className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium transition-colors ${
+            sport === s ? "bg-accent text-bg" : "text-muted hover:text-gray-200"
+          }`}
+        >
+          {SPORT_INFO[s].icon} {SPORT_INFO[s].name}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 
 function ModeToggle({ mode, onChange }: { mode: ScoringMode; onChange: (m: ScoringMode) => void }) {
@@ -207,6 +234,7 @@ function SkeletonCard() {
 
 
 export default function Home() {
+  const [sport, setSport] = useState<Sport>("nba");
   const [rosterText, setRosterText] = useState("");
   const [mode, setMode] = useState<ScoringMode>("points");
   const [data, setData] = useState<Payload | null>(null);
@@ -218,7 +246,15 @@ export default function Home() {
     setRosterText(saved && saved.trim() ? saved : SAMPLE_ROSTER);
     const savedMode = typeof window !== "undefined" ? localStorage.getItem(MODE_KEY) : null;
     if (savedMode === "points" || savedMode === "categories") setMode(savedMode);
+    const savedSport = typeof window !== "undefined" ? localStorage.getItem(SPORT_KEY) : null;
+    if (savedSport === "nba" || savedSport === "mlb") setSport(savedSport);
   }, []);
+
+  function handleSportChange(s: Sport) {
+    setSport(s);
+    localStorage.setItem(SPORT_KEY, s);
+    setData(null);
+  }
 
   function handleModeChange(m: ScoringMode) {
     setMode(m);
@@ -232,7 +268,7 @@ export default function Home() {
     const roster = rosterText.split("\n").map((s) => s.trim()).filter(Boolean);
     try {
       localStorage.setItem(STORAGE_KEY, rosterText);
-      const body: Record<string, unknown> = { roster, scoring_mode: mode };
+      const body: Record<string, unknown> = { roster, scoring_mode: mode, sport };
       if (mode === "categories") body.categories = NINE_CAT;
       const res = await fetch(`${API_BASE}/api/recommendations/manual`, {
         method: "POST",
@@ -280,6 +316,19 @@ export default function Home() {
             >
               <Flame size={14} /> Streamers
             </Link>
+            <Link
+              href="/connect"
+              className="text-sm text-muted hover:text-accent transition-colors"
+            >
+              Connect Yahoo
+            </Link>
+            <Link
+              href="/pricing"
+              className="text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+            >
+              Pro
+            </Link>
+            <SportToggle sport={sport} onChange={handleSportChange} />
             <ModeToggle mode={mode} onChange={handleModeChange} />
           </div>
         </div>
@@ -298,8 +347,20 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Coming soon for sports without data */}
+        {!SPORT_INFO[sport].hasData && (
+          <div className="rounded-xl border border-accent/30 bg-accent/5 p-8 text-center mb-8">
+            <span className="text-4xl mb-3 block">{SPORT_INFO[sport].icon}</span>
+            <h2 className="text-lg font-bold mb-2">{SPORT_INFO[sport].name} — Coming Soon</h2>
+            <p className="text-sm text-muted max-w-sm mx-auto">
+              The {SPORT_INFO[sport].name} scoring engine and data pipeline are under development.
+              Switch to NBA to use the full recommendation engine now.
+            </p>
+          </div>
+        )}
+
         {/* Form */}
-        <form onSubmit={submit} className="mb-8">
+        <form onSubmit={submit} className={`mb-8 ${!SPORT_INFO[sport].hasData ? "opacity-40 pointer-events-none" : ""}`}>
           <div className="rounded-xl border border-line bg-card overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-surface/50">
               <span className="text-xs text-muted font-medium uppercase tracking-wider">
@@ -402,7 +463,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-line mt-16 py-6">
         <p className="text-center text-xs text-muted">
-          WaiverEdge &middot; Real NBA data via stats.nba.com &middot; No logos or trademarks used
+          WaiverEdge &middot; Real sports data &middot; No logos or trademarks used
         </p>
       </footer>
     </div>

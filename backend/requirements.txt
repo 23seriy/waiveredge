@@ -9,6 +9,7 @@ SQLAlchemy==2.0.36
 psycopg2-binary==2.9.10
 httpx==0.28.1
 python-dotenv==1.0.1
+stripe>=11.0.0
 
 # Real NBA data straight from stats.nba.com (the source balldontlie wraps). The app
 # materializes its fixtures from this on first use. Pulls pandas/numpy/requests.

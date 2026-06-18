@@ -1,9 +1,9 @@
 # WaiverEdge
 
-**The fantasy basketball move-finder.** Fuses *schedule density × positional matchups
+**The fantasy sports move-finder.** Fuses *schedule density × positional matchups
 × live injuries × your actual open roster slots* into a single ranked **"do this now"**
 waiver action list — the cross-referencing serious managers currently do by hand across
-3+ tools.
+3+ tools. Currently supports **NBA basketball** (live) and **MLB baseball** (coming soon).
 
 > The wedge: incumbents each own a slice (Hashtag Basketball = schedule, Basketball
 > Monster = projections, FantasyPros = start/sit). Nobody fuses all of it against *your*
@@ -46,7 +46,7 @@ Top 10 free-agent adds (value over replacement for the default roster):
 ```
 
 **Which week?** Fantasy basketball is a regular-season product (Oct–Apr); in the
-offseason no NBA teams play, so there's nothing to project. The app therefore
+offseason no NBA teams play, so there's nothing to project. MLB runs Apr–Oct. The app therefore
 **auto-selects a representative mid-season week** — the densest week in the middle third
 of the latest available season (which sidesteps the October ramp-up, the All-Star break,
 and end-of-season resting). No hardcoded dates: when 2026-27 tips off, it tracks that
@@ -105,19 +105,24 @@ logic that produced it.
 ```
 backend/                  FastAPI + Postgres
   app/
+    sports.py             ← sport registry (NBA live, MLB config-only)
     scoring/              ← pure-stdlib scoring core (the IP)
     data/nba_fixtures.py  ← builds REAL fixtures from stats.nba.com (nba_api)
     data/balldontlie.py   ← optional production feed client (header auth, pagination)
+    data/yahoo.py         ← Yahoo Fantasy API client (OAuth + league data)
     data/ingest.py        ← optional balldontlie → Postgres / fixtures refresh
+    api/auth.py           ← Yahoo OAuth endpoints
+    api/leagues.py        ← per-user league sync + recs
+    api/billing.py        ← Stripe checkout + webhook
     recommendations.py    ← service the API + prototype share (load_fixtures)
     models.py / db.py     ← SQLAlchemy 2.0
-    main.py               ← API (/health, /api/recommendations/{sample,manual})
-  migrations/0001_init.sql
-  sample_data/            ← materialized REAL fixtures (gitignored; via dump_real_fixtures.py)
-  scripts/dump_real_fixtures.py   ← refresh the real dataset
-  scripts/prototype_scoring.py
-  tests/test_scoring.py
-frontend/                 Next.js (app router) — manual-roster form → action list
+    main.py               ← API (sport-aware endpoints)
+  migrations/
+  sample_data/            ← materialized REAL fixtures (gitignored)
+  scripts/
+  tests/                  ← 46 unit tests
+frontend/                 Next.js 14 + Tailwind CSS
+  app/                    ← /, /streamers, /connect, /league/[id], /pricing
 docker-compose.yml        Postgres for local dev
 ```
 
@@ -157,12 +162,18 @@ unlocks the dormant role-bump / availability signals) and a documented SLA.
 - **No logos / team marks** — plain-text names only.
 - Don't host game video. No gambling exposure → no compliance burden.
 
-## Roadmap (next)
+## Roadmap
 
-- [ ] Yahoo OAuth league import → per-user `/api/recommendations/{connection_id}`
+- [x] 9-category league scoring (z-score per category)
+- [x] Public streamers page (SEO/Reddit acquisition)
+- [x] Tailwind CSS UI redesign + Points/9-Cat mode toggle
+- [x] Yahoo OAuth league import + per-user recommendations
+- [x] Stripe billing + paywall scaffolding (free/Pro tiers)
+- [x] Multi-sport architecture (NBA live, MLB config-only)
+- [x] 46 unit tests (API + engine + service + scoring systems)
+- [ ] **MLB data pipeline** (MLB Stats API → fixtures)
 - [ ] Live injury **push/email alerts** (the killer feature)
 - [ ] ESPN league import (undocumented endpoints — build resilient)
 - [ ] Nightly DvP recompute job + `team_dvp` cache
-- [ ] 9-category league scoring (z-score per category)
 - [ ] LLM-written rationales + injury-report parsing
-- [ ] Stripe seasonal billing, free/paid gating
+- [ ] Deploy MVP (Railway/Fly + Vercel)
