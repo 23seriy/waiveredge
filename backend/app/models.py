@@ -112,6 +112,6 @@ class RosterEntry(Base):
     __tablename__ = "rosters"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     connection_id: Mapped[int] = mapped_column(ForeignKey("league_connections.id"), index=True)
-    player_id: Mapped[int] = mapped_column(ForeignKey("players.id"))
+    player_id: Mapped[int] = mapped_column(Integer, index=True)
     slot: Mapped[str] = mapped_column(String(8))
     droppable: Mapped[bool] = mapped_column(Boolean, default=True)

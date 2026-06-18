@@ -173,30 +173,24 @@ class YahooFantasyClient:
             return {"league_key": league_key, "scoring_type": "", "categories": []}
 
     def my_team_key(self, league_key: str) -> str | None:
-        """Find the authenticated user's team key in a league."""
-        data = self._get(f"league/{league_key}/teams")
+        """Find the authenticated user's team key in a league.
+
+        Uses the user's own teams endpoint (which reliably includes
+        is_owned_by_current_login) rather than the league's teams endpoint
+        (which omits it). Matches by league_key prefix in the team_key.
+        """
+        data = self._get("users;use_login=1/teams")
         try:
-            teams = data["fantasy_content"]["league"][1]["teams"]
+            teams = data["fantasy_content"]["users"]["0"]["user"][1]["teams"]
             for i in range(teams["count"]):
-                team_node = teams[str(i)]["team"]
-                # team_node is a list of [list-of-dicts, ...]; flatten and search.
-                is_mine = False
-                found_key = None
-                for part in team_node:
-                    if isinstance(part, list):
-                        for item in part:
-                            if isinstance(item, dict):
-                                if item.get("is_owned_by_current_login") == "1":
-                                    is_mine = True
-                                if "team_key" in item:
-                                    found_key = item["team_key"]
-                    elif isinstance(part, dict):
-                        if part.get("is_owned_by_current_login") == "1":
-                            is_mine = True
-                        if "team_key" in part:
-                            found_key = part["team_key"]
-                if is_mine and found_key:
-                    return found_key
+                inner = teams[str(i)]["team"][0]
+                key = None
+                for item in inner:
+                    if isinstance(item, dict) and "team_key" in item:
+                        key = item["team_key"]
+                # team_key format: "469.l.233345.t.4" — starts with league_key
+                if key and key.startswith(league_key + ".t."):
+                    return key
             return None
         except (KeyError, IndexError, TypeError):
             return None
