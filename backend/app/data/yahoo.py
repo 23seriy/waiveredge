@@ -173,17 +173,24 @@ class YahooFantasyClient:
             return {"league_key": league_key, "scoring_type": "", "categories": []}
 
     def my_team_key(self, league_key: str) -> str | None:
-        """Find the authenticated user's team key in a league."""
-        data = self._get(f"league/{league_key}/teams")
+        """Find the authenticated user's team key in a league.
+
+        Uses the user's own teams endpoint (which reliably includes
+        is_owned_by_current_login) rather than the league's teams endpoint
+        (which omits it). Matches by league_key prefix in the team_key.
+        """
+        data = self._get("users;use_login=1/teams")
         try:
-            teams = data["fantasy_content"]["league"][1]["teams"]
+            teams = data["fantasy_content"]["users"]["0"]["user"][1]["teams"]
             for i in range(teams["count"]):
-                team = teams[str(i)]["team"][0]
-                for item in team:
-                    if isinstance(item, dict) and item.get("is_owned_by_current_login") == "1":
-                        for k in team:
-                            if isinstance(k, dict) and "team_key" in k:
-                                return k["team_key"]
+                inner = teams[str(i)]["team"][0]
+                key = None
+                for item in inner:
+                    if isinstance(item, dict) and "team_key" in item:
+                        key = item["team_key"]
+                # team_key format: "469.l.233345.t.4" — starts with league_key
+                if key and key.startswith(league_key + ".t."):
+                    return key
             return None
         except (KeyError, IndexError, TypeError):
             return None
@@ -216,22 +223,36 @@ class YahooFantasyClient:
         except (KeyError, IndexError, TypeError):
             return []
 
-    def free_agents(self, league_key: str, count: int = 50) -> list[dict]:
-        """Top available free agents in the league."""
-        data = self._get(f"league/{league_key}/players;status=FA;count={count}")
-        try:
-            players = data["fantasy_content"]["league"][1]["players"]
-            result = []
-            for i in range(players["count"]):
-                p_data = players[str(i)]["player"][0]
-                name, position = "", ""
-                for item in p_data:
-                    if isinstance(item, dict):
-                        if "name" in item:
-                            name = item["name"].get("full", "")
-                        if "display_position" in item:
-                            position = item["display_position"]
-                result.append({"name": name, "position": position})
-            return result
-        except (KeyError, IndexError, TypeError):
-            return []
+    def free_agents(self, league_key: str, max_players: int = 500) -> list[dict]:
+        """Fetch available free agents in the league (paginated, up to max_players)."""
+        result: list[dict] = []
+        start = 0
+        page_size = 250  # Yahoo max per request
+        while start < max_players:
+            batch_size = min(page_size, max_players - start)
+            try:
+                data = self._get(
+                    f"league/{league_key}/players;status=A;start={start};count={batch_size}")
+                players = data["fantasy_content"]["league"][1]["players"]
+                if not isinstance(players, dict):
+                    break
+                count = players.get("count", 0)
+                if count == 0:
+                    break
+                for i in range(count):
+                    p_data = players[str(i)]["player"][0]
+                    name, position = "", ""
+                    for item in p_data:
+                        if isinstance(item, dict):
+                            if "name" in item:
+                                name = item["name"].get("full", "")
+                            if "display_position" in item:
+                                position = item["display_position"]
+                    if name:
+                        result.append({"name": name, "position": position})
+                if count < batch_size:
+                    break  # No more pages
+                start += count
+            except (KeyError, IndexError, TypeError):
+                break
+        return result

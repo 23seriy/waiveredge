@@ -34,7 +34,7 @@ type LeagueInfo = {
   platform: string;
   league_id: string;
   team_key: string;
-  roster: { player_id: number; slot: string; droppable: boolean }[];
+  roster: { player_id: number; name: string; slot: string; droppable: boolean }[];
 };
 
 type RecsPayload = {
@@ -185,6 +185,24 @@ export default function LeaguePage() {
                 <button onClick={syncRoster} disabled={syncing} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90 disabled:opacity-40">
                   <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> Sync from Yahoo
                 </button>
+              </div>
+            )}
+
+            {league.roster.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-base font-semibold mb-3">Your Roster</h2>
+                <div className="rounded-xl border border-line bg-card overflow-hidden">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-line">
+                    {league.roster.map((p) => (
+                      <div key={p.player_id} className="bg-card px-3 py-2 flex items-center gap-2">
+                        <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono shrink-0">
+                          {p.slot || "UTIL"}
+                        </span>
+                        <span className="text-sm truncate">{p.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
