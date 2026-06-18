@@ -26,8 +26,19 @@ class ESPNConnectRequest(BaseModel):
     league_id: int = Field(..., description="ESPN league ID (from the URL)")
     season: int = Field(default=2026, description="Season year")
     sport: str = Field(default="mlb", description="Sport key (nba, mlb)")
+    team_id: int | None = Field(default=None, description="Your team ID in the league (pick from /api/espn/teams)")
     espn_s2: str = Field(default="", description="espn_s2 cookie (for private leagues)")
     swid: str = Field(default="", description="SWID cookie (for private leagues)")
+
+
+@router.get("/teams")
+def espn_teams(league_id: int, season: int = 2026, sport: str = "mlb") -> list[dict]:
+    """List all teams in an ESPN league (no auth needed for public leagues)."""
+    client = ESPNFantasyClient(sport=sport)
+    try:
+        return client.teams(league_id, season)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
 
 
 @router.post("/connect")
@@ -41,8 +52,10 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
 
-    # Find the user's team (if cookies provided).
-    team_id = client.my_team_id(req.league_id, req.season)
+    # Find the user's team: explicit team_id > cookie-based detection.
+    team_id = req.team_id
+    if team_id is None:
+        team_id = client.my_team_id(req.league_id, req.season)
 
     # Fetch roster if we found the team.
     roster_data = []
