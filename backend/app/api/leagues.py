@@ -45,14 +45,23 @@ def get_league(connection_id: int, db: Session = Depends(get_db)) -> dict:
     """Return league connection info and the stored roster."""
     conn = _get_connection(connection_id, db)
     roster = db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).all()
+    # Enrich with player names from fixtures.
+    sport = _sport_for_league(conn.league_id)
+    try:
+        fx = load_fixtures(sport)
+        names_by_id = {p["id"]: p["name"] for p in fx["players"]}
+    except Exception:
+        names_by_id = {}
     return {
         "id": conn.id,
         "platform": conn.platform,
         "league_id": conn.league_id,
         "team_key": conn.team_key,
         "scoring": conn.scoring_json,
+        "sport": sport,
         "roster": [
-            {"player_id": r.player_id, "slot": r.slot, "droppable": r.droppable}
+            {"player_id": r.player_id, "name": names_by_id.get(r.player_id, f"Player #{r.player_id}"),
+             "slot": r.slot, "droppable": r.droppable}
             for r in roster
         ],
     }
