@@ -71,7 +71,7 @@ def recommendations_sample(mode: Literal["points", "categories"] = "points", spo
     sc = get_sport(sport)
     if not sc.has_data:
         raise HTTPException(status_code=501, detail=f"{sc.name} data pipeline not yet available.")
-    return sample_recommendations(scoring_mode=mode)
+    return sample_recommendations(scoring_mode=mode, sport=sport)
 
 
 @app.post("/api/recommendations/manual")
@@ -82,7 +82,7 @@ def recommendations_manual(req: ManualRosterRequest) -> dict:
         raise HTTPException(status_code=501, detail=f"{sc.name} data pipeline not yet available.")
     cat_meta = sc.category_meta
     cats = [c for c in req.categories if c in cat_meta] if req.scoring_mode == "categories" else None
-    result = manual_recommendations(req.roster, req.droppable, scoring_mode=req.scoring_mode, categories=cats)
+    result = manual_recommendations(req.roster, req.droppable, scoring_mode=req.scoring_mode, categories=cats, sport=req.sport)
     if result["resolved_count"] == 0:
         raise HTTPException(
             status_code=400,
@@ -98,7 +98,7 @@ def streamers(top: int = 30, sport: str = "nba") -> dict:
     sc = get_sport(sport)
     if not sc.has_data:
         raise HTTPException(status_code=501, detail=f"{sc.name} data pipeline not yet available.")
-    return {**top_streamers(top_n=min(top, 50)), "sport": sport}
+    return {**top_streamers(top_n=min(top, 50), sport=sport), "sport": sport}
 
 
 # TODO: @app.get("/api/recommendations/{connection_id}") — DB-backed, per-user.
