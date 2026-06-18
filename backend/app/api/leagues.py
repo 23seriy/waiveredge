@@ -17,6 +17,21 @@ from ..recommendations import build_recommendations, load_fixtures, resolve_name
 
 router = APIRouter(prefix="/api/leagues", tags=["leagues"])
 
+# Yahoo game key prefixes → sport. MLB game IDs are 469 (2026), 454 (2025), etc.
+# NBA game IDs are 418 (2025-26), 428, etc. We match by checking the league_id.
+_YAHOO_MLB_GAMES = {"469", "454", "439", "422", "404", "388", "370", "357", "346", "328"}
+_YAHOO_NBA_GAMES = {"418", "428", "410", "395", "375", "364", "353", "340"}
+
+
+def _sport_for_league(league_id: str | None) -> str:
+    """Derive sport from Yahoo league_id (e.g. '469.l.233345' → 'mlb')."""
+    if not league_id:
+        return "nba"
+    game_id = league_id.split(".")[0]
+    if game_id in _YAHOO_MLB_GAMES:
+        return "mlb"
+    return "nba"
+
 
 def _get_connection(connection_id: int, db: Session) -> LeagueConnection:
     conn = db.query(LeagueConnection).filter(LeagueConnection.id == connection_id).first()
@@ -73,7 +88,8 @@ def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     if not yahoo_roster:
         raise HTTPException(status_code=502, detail="Yahoo returned an empty roster.")
 
-    fx = load_fixtures()
+    sport = _sport_for_league(conn.league_id)
+    fx = load_fixtures(sport)
     names = [p["name"] for p in yahoo_roster]
     resolved_ids, unresolved = resolve_names(names, fx["players"])
 
@@ -83,7 +99,7 @@ def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     for pid in resolved_ids:
         p = players_by_id.get(pid, {})
         yahoo_p = yahoo_by_name.get(p.get("name", ""), {})
-        slot = yahoo_p.get("slot", p.get("positions", ["UTIL"])[0])
+        slot = yahoo_p.get("slot") or p.get("positions", ["UTIL"])[0] or "UTIL"
         db.add(RosterEntry(connection_id=conn.id, player_id=pid, slot=slot, droppable=True))
     db.commit()
 
@@ -98,7 +114,8 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
     if not roster_entries:
         raise HTTPException(status_code=400, detail="No roster stored. Call POST /sync first.")
 
-    fx = load_fixtures()
+    sport = _sport_for_league(conn.league_id)
+    fx = load_fixtures(sport)
     cfg = fx["roster"]
 
     roster_ids = {r.player_id for r in roster_entries}
