@@ -158,6 +158,7 @@ export default function LeaguePage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/streamers" className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors"><Flame size={14} /> Streamers</Link>
+            <Link href={`/alerts/${connectionId}`} className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">🔔 Alerts</Link>
             {mode === "categories" && <span className="flex items-center gap-1 text-xs text-accent bg-surface rounded-md px-2 py-1"><ArrowUpDown size={12} /> 9-Cat</span>}
           </div>
         </div>

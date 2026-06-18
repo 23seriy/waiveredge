@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from .api.alerts import router as alerts_router
 from .api.auth import router as auth_router
 from .api.billing import router as billing_router
 from .api.leagues import router as leagues_router
@@ -38,6 +39,7 @@ class ManualRosterRequest(BaseModel):
     sport: str = Field(default="nba", description="Sport key (nba, mlb).")
 
 app = FastAPI(title="WaiverEdge API", version="0.1.0")
+app.include_router(alerts_router)
 app.include_router(auth_router)
 app.include_router(billing_router)
 app.include_router(leagues_router)
