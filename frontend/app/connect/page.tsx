@@ -1,8 +1,8 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { ArrowRight, ExternalLink, Flame, Zap } from "lucide-react";
+import { Suspense, useState } from "react";
+import { ArrowRight, ExternalLink, Flame, Loader2, Zap } from "lucide-react";
 import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
@@ -59,6 +59,102 @@ function SportCard({ sport }: { sport: Sport }) {
   );
 }
 
+function ESPNConnectForm() {
+  const [leagueId, setLeagueId] = useState("");
+  const [espnSport, setEspnSport] = useState("mlb");
+  const [espnS2, setEspnS2] = useState("");
+  const [swid, setSwid] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function handleConnect() {
+    if (!leagueId.trim()) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/espn/connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          league_id: parseInt(leagueId),
+          season: 2026,
+          sport: espnSport,
+          espn_s2: espnS2,
+          swid,
+        }),
+      });
+      if (!res.ok) {
+        const b = await res.json().catch(() => null);
+        setResult(b?.detail || `Failed (${res.status})`);
+        return;
+      }
+      const data = await res.json();
+      window.location.href = `/league/${data.connection_id}`;
+    } catch {
+      setResult("Could not reach the API.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-muted block mb-1">League ID</label>
+          <input
+            type="text"
+            value={leagueId}
+            onChange={(e) => setLeagueId(e.target.value)}
+            placeholder="e.g. 233345"
+            className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted block mb-1">Sport</label>
+          <select
+            value={espnSport}
+            onChange={(e) => setEspnSport(e.target.value)}
+            className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent"
+          >
+            <option value="mlb">⚾ MLB Baseball</option>
+            <option value="nba">🏀 NBA Basketball</option>
+          </select>
+        </div>
+      </div>
+      <details className="text-xs text-muted">
+        <summary className="cursor-pointer hover:text-accent">Private league? Add cookies (optional)</summary>
+        <div className="mt-2 space-y-2">
+          <input
+            type="text"
+            value={espnS2}
+            onChange={(e) => setEspnS2(e.target.value)}
+            placeholder="espn_s2 cookie value"
+            className="w-full bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-accent"
+          />
+          <input
+            type="text"
+            value={swid}
+            onChange={(e) => setSwid(e.target.value)}
+            placeholder="SWID cookie value"
+            className="w-full bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-accent"
+          />
+          <p className="text-[10px] text-muted">Find these in your browser DevTools → Application → Cookies → espn.com</p>
+        </div>
+      </details>
+      {result && <p className="text-sm text-neg">{result}</p>}
+      <button
+        onClick={handleConnect}
+        disabled={loading || !leagueId.trim()}
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors disabled:opacity-40"
+      >
+        {loading ? <><Loader2 size={14} className="animate-spin" /> Connecting…</> : "Connect ESPN League"}
+      </button>
+    </div>
+  );
+}
+
+
 function ConnectContent() {
   const params = useSearchParams();
   const error = params.get("error");
@@ -103,6 +199,18 @@ function ConnectContent() {
           {SPORTS.map((s) => <SportCard key={s.key} sport={s} />)}
         </div>
 
+        {/* ESPN Connect */}
+        <div className="rounded-xl border border-line bg-card p-6 mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-2xl font-bold text-red-500">ESPN</span>
+            <div>
+              <h3 className="text-base font-semibold">ESPN Fantasy</h3>
+              <p className="text-xs text-muted">Paste your league ID and cookies to connect</p>
+            </div>
+          </div>
+          <ESPNConnectForm />
+        </div>
+
         <div className="rounded-lg bg-surface/50 border border-line p-4 mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
             <div>
@@ -121,7 +229,7 @@ function ConnectContent() {
         </div>
 
         <div className="text-center">
-          <p className="text-xs text-muted mb-2">Don&apos;t have Yahoo?</p>
+          <p className="text-xs text-muted mb-2">Don&apos;t use Yahoo or ESPN?</p>
           <Link href="/" className="inline-flex items-center gap-1 text-sm text-accent hover:underline">
             Paste your roster manually <ArrowRight size={14} />
           </Link>
