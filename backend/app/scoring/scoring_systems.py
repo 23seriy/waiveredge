@@ -49,9 +49,14 @@ RAW_STATS = ("pts", "reb", "ast", "stl", "blk", "fg3m", "turnover",
 # Standard 9-category set (Yahoo/ESPN default).
 NINE_CAT = ("fg_pct", "ft_pct", "fg3m", "pts", "reb", "ast", "stl", "blk", "turnover")
 
+# Standard MLB 5x5 roto categories.
+MLB_5X5 = ("avg", "hr", "rbi", "r", "sb", "w", "sv", "era", "whip", "k")
+
 # Per-category metadata. Counting cats map to a raw `stat`; `percentage` cats are
-# valued by volume-weighted impact using made/att; `negative` cats are better low.
+# valued by volume-weighted impact using made/att; `rate` cats are ratio stats
+# (ERA, WHIP); `negative` cats are better low.
 CATEGORY_META: dict[str, dict] = {
+    # NBA 9-cat
     "fg_pct":   {"percentage": True, "made": "fgm", "att": "fga"},
     "ft_pct":   {"percentage": True, "made": "ftm", "att": "fta"},
     "fg3m":     {"stat": "fg3m"},
@@ -61,12 +66,28 @@ CATEGORY_META: dict[str, dict] = {
     "stl":      {"stat": "stl"},
     "blk":      {"stat": "blk"},
     "turnover": {"stat": "turnover", "negative": True},
+    # MLB 5x5 hitting
+    "avg":  {"percentage": True, "made": "h", "att": "ab"},
+    "hr":   {"stat": "hr"},
+    "rbi":  {"stat": "rbi"},
+    "r":    {"stat": "r"},
+    "sb":   {"stat": "sb"},
+    # MLB 5x5 pitching
+    "w":    {"stat": "w"},
+    "sv":   {"stat": "sv"},
+    "era":  {"rate": True, "num": ["er"], "den": "ip", "scale": 9.0, "negative": True},
+    "whip": {"rate": True, "num": ["ha", "bba"], "den": "ip", "negative": True},
+    "k":    {"stat": "k_pitching"},
 }
 
 # Human labels for rationales.
 CATEGORY_LABEL = {
+    # NBA
     "fg_pct": "FG%", "ft_pct": "FT%", "fg3m": "3PM", "pts": "PTS", "reb": "REB",
     "ast": "AST", "stl": "STL", "blk": "BLK", "turnover": "TO",
+    # MLB
+    "avg": "AVG", "hr": "HR", "rbi": "RBI", "r": "R", "sb": "SB",
+    "w": "W", "sv": "SV", "era": "ERA", "whip": "WHIP", "k": "K",
 }
 
 

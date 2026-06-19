@@ -60,11 +60,19 @@ const SPORT_INFO: Record<Sport, { icon: string; name: string; hasData: boolean; 
 };
 
 const CAT_LABELS: Record<string, string> = {
+  // NBA
   fg_pct: "FG%", ft_pct: "FT%", fg3m: "3PM", pts: "PTS", reb: "REB",
   ast: "AST", stl: "STL", blk: "BLK", turnover: "TO",
+  // MLB
+  avg: "AVG", hr: "HR", rbi: "RBI", r: "R", sb: "SB",
+  w: "W", sv: "SV", era: "ERA", whip: "WHIP", k: "K",
 };
 
 const NINE_CAT = ["fg_pct", "ft_pct", "fg3m", "pts", "reb", "ast", "stl", "blk", "turnover"];
+const MLB_5X5 = ["avg", "hr", "rbi", "r", "sb", "w", "sv", "era", "whip", "k"];
+
+function getCatKeys(sport: Sport) { return sport === "mlb" ? MLB_5X5 : NINE_CAT; }
+function getCatLabel(sport: Sport) { return sport === "mlb" ? "5x5" : "9-Cat"; }
 
 
 function SportToggle({ sport, onChange }: { sport: Sport; onChange: (s: Sport) => void }) {
@@ -174,7 +182,7 @@ function AIInsightButton({ rec }: { rec: Recommendation }) {
 }
 
 
-function RecCard({ rec, rank, mode }: { rec: Recommendation; rank: number; mode: ScoringMode }) {
+function RecCard({ rec, rank, mode, sport }: { rec: Recommendation; rank: number; mode: ScoringMode; sport: Sport }) {
   const [expanded, setExpanded] = useState(false);
   const isCategory = mode === "categories" && rec.per_cat_z;
   const marginalStr = mode === "categories"
@@ -226,7 +234,7 @@ function RecCard({ rec, rank, mode }: { rec: Recommendation; rank: number; mode:
           {/* Category z-scores */}
           {isCategory && rec.per_cat_z && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {NINE_CAT.filter((c) => c in rec.per_cat_z!).map((cat) => (
+              {getCatKeys(sport).filter((c) => c in rec.per_cat_z!).map((cat) => (
                 <ZBadge key={cat} cat={cat} z={rec.per_cat_z![cat]} />
               ))}
             </div>
@@ -346,7 +354,7 @@ export default function Home() {
     const roster = rosterText.split("\n").map((s) => s.trim()).filter(Boolean);
 
     const body: Record<string, unknown> = { roster, scoring_mode: mode, sport };
-    if (mode === "categories") body.categories = NINE_CAT;
+    if (mode === "categories") body.categories = getCatKeys(sport);
     localStorage.setItem(STORAGE_KEY, rosterText);
 
     // Retry up to 2 times with 30s timeout.
@@ -446,7 +454,7 @@ export default function Home() {
           </div>
 
           <p className="text-xs text-muted">
-            Works with Yahoo and ESPN &middot; NBA &amp; MLB &middot; Points and 9-Cat leagues
+            Works with Yahoo and ESPN &middot; NBA &amp; MLB &middot; Points, 9-Cat &amp; 5x5 leagues
           </p>
         </section>
 
@@ -534,7 +542,7 @@ export default function Home() {
                     <> &middot; {data.resolved_count} roster players matched</>
                   )}
                   {data.scoring_mode === "categories" && (
-                    <> &middot; <span className="text-accent">9-Cat z-score mode</span></>
+                    <> &middot; <span className="text-accent">{getCatLabel(sport)} z-score mode</span></>
                   )}
                 </p>
               </div>
@@ -558,7 +566,7 @@ export default function Home() {
             ) : (
               <div className="space-y-3">
                 {data.recommendations.map((r, i) => (
-                  <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} />
+                  <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={sport} />
                 ))}
               </div>
             )}
