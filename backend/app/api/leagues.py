@@ -60,9 +60,12 @@ def _yahoo_scoring_weights(scoring_json: dict | None) -> dict[str, float] | None
 
 
 def _sport_for_league(league_id: str | None) -> str:
-    """Derive sport from Yahoo league_id (e.g. '469.l.233345' → 'mlb')."""
+    """Derive sport from league_id. Supports Yahoo (469.l.233345) and ESPN (espn-mlb-123456)."""
     if not league_id:
         return "nba"
+    if league_id.startswith("espn-"):
+        parts = league_id.split("-")
+        return parts[1] if len(parts) >= 3 else "nba"
     game_id = league_id.split(".")[0]
     if game_id in _YAHOO_MLB_GAMES:
         return "mlb"
@@ -105,16 +108,65 @@ def get_league(connection_id: int, db: Session = Depends(get_db)) -> dict:
 
 @router.post("/{connection_id}/sync")
 def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
-    """Refresh the roster from Yahoo and persist it."""
+    """Refresh the roster and free agents. Supports Yahoo and ESPN."""
     conn = _get_connection(connection_id, db)
-    if conn.platform != "yahoo":
-        raise HTTPException(status_code=400, detail="Cannot sync: not a Yahoo connection.")
+
+    if conn.platform == "espn":
+        return _sync_espn(conn, db)
+    if conn.platform == "yahoo":
+        return _sync_yahoo(conn, db)
+    raise HTTPException(status_code=400, detail=f"Unsupported platform: {conn.platform}")
+
+
+def _sync_espn(conn: LeagueConnection, db: Session) -> dict:
+    """Re-sync an ESPN connection."""
+    from ..data.espn import ESPNFantasyClient
+
+    tokens = conn.oauth_tokens or {}
+    client = ESPNFantasyClient(
+        sport=_sport_for_league(conn.league_id),
+        espn_s2=tokens.get("espn_s2", ""),
+        swid=tokens.get("swid", ""),
+    )
+    espn_league_id = tokens.get("espn_league_id")
+    team_id = tokens.get("espn_team_id")
+    season = tokens.get("season", 2026)
+    if not espn_league_id:
+        raise HTTPException(status_code=400, detail="Missing ESPN league ID in connection.")
+
+    roster_data = client.roster(espn_league_id, season, team_id) if team_id else []
+    fas = client.free_agents(espn_league_id, season, count=200)
+
+    sport = _sport_for_league(conn.league_id)
+    fx = load_fixtures(sport)
+    roster_names = [p["name"] for p in roster_data]
+    resolved_ids, unresolved = resolve_names(roster_names, fx["players"])
+    fa_names = [p["name"] for p in fas]
+    fa_ids, _ = resolve_names(fa_names, fx["players"])
+
+    scoring_data = dict(conn.scoring_json or {})
+    scoring_data["free_agent_ids"] = fa_ids
+    conn.scoring_json = scoring_data
+
+    db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).delete()
+    players_by_id = {p["id"]: p for p in fx["players"]}
+    for pid in resolved_ids:
+        p = players_by_id.get(pid, {})
+        slot = p.get("positions", ["UTIL"])[0] or "UTIL"
+        db.add(RosterEntry(connection_id=conn.id, player_id=pid, slot=slot, droppable=True))
+    db.commit()
+
+    return {"synced": len(resolved_ids), "unresolved": unresolved,
+            "roster_size": len(resolved_ids), "free_agents_found": len(fa_ids)}
+
+
+def _sync_yahoo(conn: LeagueConnection, db: Session) -> dict:
+    """Re-sync a Yahoo connection."""
     if not conn.oauth_tokens:
         raise HTTPException(status_code=400, detail="No OAuth tokens on this connection.")
 
     yc = YahooFantasyClient(conn.oauth_tokens)
 
-    # If team_key was missing from the initial OAuth callback, try to find it now.
     team_key = conn.team_key
     if not team_key and conn.league_id:
         team_key = yc.my_team_key(conn.league_id)
@@ -122,8 +174,7 @@ def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
             conn.team_key = team_key
             db.commit()
     if not team_key:
-        raise HTTPException(status_code=400, detail="Could not determine your team in this league. "
-                            "You may not be a manager in this league.")
+        raise HTTPException(status_code=400, detail="Could not determine your team in this league.")
 
     yahoo_roster = yc.roster(team_key)
     if yc.tokens_refreshed:
@@ -133,7 +184,6 @@ def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     if not yahoo_roster:
         raise HTTPException(status_code=502, detail="Yahoo returned an empty roster.")
 
-    # Fetch actual free agents from the league.
     yahoo_fas = yc.free_agents(conn.league_id, max_players=500)
     if yc.tokens_refreshed:
         conn.oauth_tokens = yc.current_tokens
@@ -143,11 +193,9 @@ def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     roster_names = [p["name"] for p in yahoo_roster]
     resolved_ids, unresolved = resolve_names(roster_names, fx["players"])
 
-    # Resolve free agent names to player IDs.
     fa_names = [p["name"] for p in yahoo_fas]
     fa_ids, _ = resolve_names(fa_names, fx["players"])
 
-    # Store FA IDs in the connection's scoring_json for the recs endpoint.
     scoring_data = dict(conn.scoring_json or {})
     scoring_data["free_agent_ids"] = fa_ids
     conn.scoring_json = scoring_data
@@ -162,12 +210,8 @@ def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
         db.add(RosterEntry(connection_id=conn.id, player_id=pid, slot=slot, droppable=True))
     db.commit()
 
-    return {
-        "synced": len(resolved_ids),
-        "unresolved": unresolved,
-        "roster_size": len(resolved_ids),
-        "free_agents_found": len(fa_ids),
-    }
+    return {"synced": len(resolved_ids), "unresolved": unresolved,
+            "roster_size": len(resolved_ids), "free_agents_found": len(fa_ids)}
 
 
 @router.get("/{connection_id}/recs")
@@ -196,13 +240,14 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
     scoring_type = scoring.get("scoring_type", "")
     mode = "categories" if scoring_type in ("head", "roto") else "points"
 
-    # Use the Yahoo league's actual scoring weights when available.
-    yahoo_weights = _yahoo_scoring_weights(scoring)
+    # Use the league's actual scoring weights when available.
+    # ESPN stores weights directly; Yahoo uses categories with modifiers.
+    league_weights = scoring.get("weights") or _yahoo_scoring_weights(scoring)
 
     fx["roster"] = {
         "week_start": cfg["week_start"],
         "week_end": cfg["week_end"],
-        "scoring": yahoo_weights or cfg.get("scoring"),
+        "scoring": league_weights or cfg.get("scoring"),
         "mode": mode,
         "categories": None,
         "roster": [{"player_id": r.player_id, "slot": r.slot} for r in roster_entries],
