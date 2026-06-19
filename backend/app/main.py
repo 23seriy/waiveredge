@@ -19,7 +19,7 @@ from .api.billing import router as billing_router
 from .api.espn import router as espn_router
 from .api.leagues import router as leagues_router
 from .config import settings
-from .recommendations import manual_recommendations, sample_recommendations, top_streamers
+from .recommendations import fixture_build_status, manual_recommendations, sample_recommendations, top_streamers
 from .scoring.scoring_systems import CATEGORY_META, NINE_CAT
 from .sports import SPORTS, get_sport
 
@@ -62,6 +62,12 @@ def list_sports() -> list[dict]:
          "has_data": s.has_data, "positions": s.positions, "note": s.note}
         for s in SPORTS.values()
     ]
+
+
+@app.get("/api/fixtures/status")
+def fixtures_status(sport: str = "nba") -> dict:
+    """Check if fixtures are ready, building, or stale."""
+    return fixture_build_status(sport)
 
 
 @app.get("/health")

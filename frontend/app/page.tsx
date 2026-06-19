@@ -233,6 +233,44 @@ function SkeletonCard() {
 }
 
 
+function FixtureStatus({ sport }: { sport: Sport }) {
+  const [status, setStatus] = useState<{ has_data: boolean; building: boolean; progress: string } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/fixtures/status?sport=${sport}`);
+        if (res.ok && active) {
+          const d = await res.json();
+          setStatus(d);
+          if (d.building && !d.has_data) {
+            setTimeout(poll, 5000);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    poll();
+    return () => { active = false; };
+  }, [sport]);
+
+  if (!status || status.has_data) return null;
+  if (!status.building) return null;
+
+  return (
+    <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center mb-6">
+      <Loader2 size={24} className="animate-spin text-accent mx-auto mb-2" />
+      <h3 className="text-sm font-semibold mb-1">
+        Preparing {SPORT_INFO[sport].name} data...
+      </h3>
+      <p className="text-xs text-muted">
+        {status.progress || "Fetching players and game stats. This only happens once and takes a few minutes."}
+      </p>
+    </div>
+  );
+}
+
+
 export default function Home() {
   const [sport, setSport] = useState<Sport>("nba");
   const [rosterText, setRosterText] = useState("");
@@ -347,20 +385,11 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Coming soon for sports without data */}
-        {!SPORT_INFO[sport].hasData && (
-          <div className="rounded-xl border border-accent/30 bg-accent/5 p-8 text-center mb-8">
-            <span className="text-4xl mb-3 block">{SPORT_INFO[sport].icon}</span>
-            <h2 className="text-lg font-bold mb-2">{SPORT_INFO[sport].name} — Coming Soon</h2>
-            <p className="text-sm text-muted max-w-sm mx-auto">
-              The {SPORT_INFO[sport].name} scoring engine and data pipeline are under development.
-              Switch to NBA to use the full recommendation engine now.
-            </p>
-          </div>
-        )}
+        {/* Fixture status check */}
+        <FixtureStatus sport={sport} />
 
         {/* Form */}
-        <form onSubmit={submit} className={`mb-8 ${!SPORT_INFO[sport].hasData ? "opacity-40 pointer-events-none" : ""}`}>
+        <form onSubmit={submit} className="mb-8">
           <div className="rounded-xl border border-line bg-card overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-surface/50">
               <span className="text-xs text-muted font-medium uppercase tracking-wider">
