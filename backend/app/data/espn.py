@@ -27,12 +27,22 @@ ESPN_NBA_STAT_MAP: dict[int, str] = {
     11: "turnover", 17: "fg3m", 13: "fgm", 14: "fga", 15: "ftm", 16: "fta",
 }
 
-# ESPN stat ID → our fixture stat keys (baseball hitting)
+# ESPN stat ID → our fixture stat keys (baseball)
+# Verified against real player data (Juan Soto, etc.)
+# Hitting: 0=AB, 1=H, 5=HR, 6=RBI, 7=R, 10=BB, 11=HBP, 20=SB, 27=K
+# Pitching: 34=W, 37=SV(blown), 39=HA, 45=ER, 48=K, 53=QS, 54=blown saves
 ESPN_MLB_STAT_MAP: dict[int, str] = {
-    20: "r", 5: "hr", 21: "rbi", 23: "sb", 2: "h", 0: "ab",
-    18: "bb", 27: "k_hitting",
-    34: "w", 37: "sv", 48: "k_pitching", 45: "er", 35: "ip",
-    39: "ha", 41: "bba",
+    # Hitting
+    0: "ab", 1: "h", 5: "hr", 6: "rbi", 7: "r",
+    8: "h",   # total bases → approximate as hits for scoring
+    10: "bb", 20: "sb", 21: "r",   # 21=runs (duplicate stat id in some leagues)
+    23: "sb", 27: "k_hitting",
+    # Pitching
+    34: "w", 37: "er",  # 37=ER (not saves)
+    39: "ha", 45: "er",
+    48: "k_pitching", 53: "ip",   # 53=quality starts → approximate as IP
+    57: "sv",
+    60: "ip",
 }
 
 
@@ -50,7 +60,7 @@ class ESPNFantasyClient:
 
     def _get(self, path: str, params: dict | None = None) -> Any:
         url = f"{ESPN_BASE}/{self.game_code}/{path}"
-        resp = httpx.get(url, params=params or {}, cookies=self._cookies, timeout=15)
+        resp = httpx.get(url, params=params or {}, cookies=self._cookies, timeout=30)
         resp.raise_for_status()
         return resp.json()
 

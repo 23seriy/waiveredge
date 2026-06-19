@@ -199,13 +199,14 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
     scoring_type = scoring.get("scoring_type", "")
     mode = "categories" if scoring_type in ("head", "roto") else "points"
 
-    # Use the Yahoo league's actual scoring weights when available.
-    yahoo_weights = _yahoo_scoring_weights(scoring)
+    # Use the league's actual scoring weights when available.
+    # ESPN stores weights directly; Yahoo uses categories with modifiers.
+    league_weights = scoring.get("weights") or _yahoo_scoring_weights(scoring)
 
     fx["roster"] = {
         "week_start": cfg["week_start"],
         "week_end": cfg["week_end"],
-        "scoring": yahoo_weights or cfg.get("scoring"),
+        "scoring": league_weights or cfg.get("scoring"),
         "mode": mode,
         "categories": None,
         "roster": [{"player_id": r.player_id, "slot": r.slot} for r in roster_entries],
