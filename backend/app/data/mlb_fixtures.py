@@ -130,12 +130,15 @@ def build_real_fixtures(output_dir: Path, season: int | None = None) -> None:
             })
     print(f"[MLB] {len(schedule)} games in the week")
 
-    # Collect rosters for all teams (active + 40-man to include IL players)
+    # Fetch 40-man rosters (includes IL players for name resolution) but track
+    # which players are on the active roster (only they get game logs fetched).
     print("[MLB] Fetching rosters...")
     players = []
+    active_ids: set[int] = set()
     seen_ids: set[int] = set()
     for team in teams:
         try:
+            # 40-man for full player list (including IL)
             roster_data = _get(f"teams/{team['id']}/roster", {
                 "rosterType": "40Man", "season": season,
             })
@@ -145,13 +148,17 @@ def build_real_fixtures(output_dir: Path, season: int | None = None) -> None:
                     continue
                 seen_ids.add(pid)
                 pos = entry.get("position", {}).get("abbreviation", "")
+                status = entry.get("status", {}).get("code", "")
                 players.append({
                     "id": pid,
                     "name": entry["person"]["fullName"],
                     "team_id": team["id"],
                     "positions": _norm_pos(pos),
                 })
-            time.sleep(0.2)  # Be polite to the API
+                # Only fetch game logs for active players (A) — not IL/minors
+                if status == "A":
+                    active_ids.add(pid)
+            time.sleep(0.1)
         except Exception as e:
             print(f"  Warning: failed to get roster for {team['abbreviation']}: {e}")
 
@@ -162,10 +169,14 @@ def build_real_fixtures(output_dir: Path, season: int | None = None) -> None:
     log_start = log_end - timedelta(days=30)
     print(f"[MLB] Fetching game logs ({log_start} → {log_end})...")
 
+    # Only fetch game logs for active players (not IL/minors).
+    active_players = [p for p in players if p["id"] in active_ids]
+    print(f"[MLB] Fetching game logs for {len(active_players)} active players (skipping {len(players) - len(active_players)} IL/minors)...")
+
     game_logs = []
     batch_size = 50
-    for i in range(0, len(players), batch_size):
-        batch = players[i:i + batch_size]
+    for i in range(0, len(active_players), batch_size):
+        batch = active_players[i:i + batch_size]
         for p in batch:
             try:
                 # Determine stat group based on position
@@ -220,9 +231,9 @@ def build_real_fixtures(output_dir: Path, season: int | None = None) -> None:
                         })
             except Exception:
                 pass  # Skip players whose logs fail
-        time.sleep(0.3)
-        if (i + batch_size) % 200 == 0:
-            print(f"  ... {i + batch_size}/{len(players)} players processed")
+        time.sleep(0.15)
+        if (i + batch_size) % 100 == 0:
+            print(f"  ... {min(i + batch_size, len(active_players))}/{len(active_players)} players processed")
 
     print(f"[MLB] {len(game_logs)} game log rows")
 
