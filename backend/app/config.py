@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # App secret for signing session cookies (generate a random one for production).
     app_secret: str = "change-me-in-production"
 
+    # OpenAI API key for LLM-generated rationales.
+    openai_api_key: str = ""
+
     # Stripe (https://dashboard.stripe.com/apikeys)
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
