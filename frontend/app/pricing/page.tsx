@@ -14,16 +14,26 @@ export default function PricingPage() {
   const [plan, setPlan] = useState<Plan>("season");
   const [loading, setLoading] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   async function handleCheckout() {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`${API_BASE}/api/billing/checkout`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: 1, plan }),
       });
-      if (!res.ok) { const b = await res.json().catch(() => null); alert(b?.detail || "Checkout failed"); return; }
+      if (!res.ok) {
+        const b = await res.json().catch(() => null);
+        const detail = b?.detail;
+        setError(typeof detail === "string" ? detail : detail?.message || "Checkout failed. Please try again.");
+        return;
+      }
       const { checkout_url } = await res.json();
       if (checkout_url) window.location.href = checkout_url;
+    } catch {
+      setError("Could not reach the server.");
     } finally { setLoading(false); }
   }
 
@@ -74,6 +84,12 @@ export default function PricingPage() {
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mt-6 text-center">
+            <p className="text-sm text-neg">{error}</p>
+          </div>
+        )}
 
         <p className="text-center text-xs text-muted mt-8">Secure checkout powered by Stripe. Cancel anytime.</p>
       </main>
