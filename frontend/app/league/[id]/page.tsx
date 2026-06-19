@@ -35,6 +35,7 @@ type LeagueInfo = {
   platform: string;
   league_id: string;
   team_key: string;
+  sport: string;
   roster: { player_id: number; name: string; slot: string; droppable: boolean }[];
 };
 
@@ -49,8 +50,13 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const CAT_LABELS: Record<string, string> = {
   fg_pct: "FG%", ft_pct: "FT%", fg3m: "3PM", pts: "PTS", reb: "REB",
   ast: "AST", stl: "STL", blk: "BLK", turnover: "TO",
+  avg: "AVG", hr: "HR", rbi: "RBI", r: "R", sb: "SB",
+  w: "W", sv: "SV", era: "ERA", whip: "WHIP", k: "K",
 };
 const NINE_CAT = ["fg_pct", "ft_pct", "fg3m", "pts", "reb", "ast", "stl", "blk", "turnover"];
+const MLB_5X5 = ["avg", "hr", "rbi", "r", "sb", "w", "sv", "era", "whip", "k"];
+function getCatKeys(sport: string) { return sport === "mlb" ? MLB_5X5 : NINE_CAT; }
+function getCatLabel(sport: string) { return sport === "mlb" ? "5x5" : "9-Cat"; }
 
 function ZBadge({ cat, z }: { cat: string; z: number }) {
   const label = CAT_LABELS[cat] ?? cat;
@@ -62,7 +68,7 @@ function ZBadge({ cat, z }: { cat: string; z: number }) {
   );
 }
 
-function RecCard({ rec, rank, mode }: { rec: Recommendation; rank: number; mode: string }) {
+function RecCard({ rec, rank, mode, sport }: { rec: Recommendation; rank: number; mode: string; sport: string }) {
   const [expanded, setExpanded] = useState(false);
   const isCategory = mode === "categories" && rec.per_cat_z;
   const marginalStr = mode === "categories"
@@ -91,7 +97,7 @@ function RecCard({ rec, rank, mode }: { rec: Recommendation; rank: number; mode:
           </div>
           {isCategory && rec.per_cat_z && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {NINE_CAT.filter((c) => c in rec.per_cat_z!).map((cat) => <ZBadge key={cat} cat={cat} z={rec.per_cat_z![cat]} />)}
+              {getCatKeys(sport).filter((c) => c in rec.per_cat_z!).map((cat) => <ZBadge key={cat} cat={cat} z={rec.per_cat_z![cat]} />)}
             </div>
           )}
           <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 mt-2 text-xs text-muted hover:text-gray-300 transition-colors">
@@ -164,7 +170,7 @@ export default function LeaguePage() {
           <div className="flex items-center gap-3">
             <Link href="/streamers" className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors"><Flame size={14} /> Streamers</Link>
             <Link href={`/alerts/${connectionId}`} className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">🔔 Alerts</Link>
-            {mode === "categories" && <span className="flex items-center gap-1 text-xs text-accent bg-surface rounded-md px-2 py-1"><ArrowUpDown size={12} /> 9-Cat</span>}
+            {mode === "categories" && <span className="flex items-center gap-1 text-xs text-accent bg-surface rounded-md px-2 py-1"><ArrowUpDown size={12} /> {getCatLabel(league?.sport ?? "nba")}</span>}
           </div>
         </div>
       </header>
@@ -227,11 +233,11 @@ export default function LeaguePage() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-base font-semibold">Waiver Action List</h2>
-                    <p className="text-xs text-muted mt-0.5">Week of {recs.week.start} to {recs.week.end}{recs.scoring_mode === "categories" && <> · <span className="text-accent">9-Cat</span></>}</p>
+                    <p className="text-xs text-muted mt-0.5">Week of {recs.week.start} to {recs.week.end}{recs.scoring_mode === "categories" && <> · <span className="text-accent">{getCatLabel(league?.sport ?? "nba")}</span></>}</p>
                   </div>
                   <span className="text-xs text-muted">{recs.recommendations.length} add{recs.recommendations.length !== 1 ? "s" : ""}</span>
                 </div>
-                <div className="space-y-3">{recs.recommendations.map((r, i) => <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} />)}</div>
+                <div className="space-y-3">{recs.recommendations.map((r, i) => <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={league?.sport ?? "nba"} />)}</div>
               </>
             )}
             {recs && recs.recommendations.length === 0 && league.roster.length > 0 && (
