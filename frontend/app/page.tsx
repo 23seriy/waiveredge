@@ -128,6 +128,52 @@ function ZBadge({ cat, z }: { cat: string; z: number }) {
 }
 
 
+function AIInsightButton({ rec }: { rec: Recommendation }) {
+  const [insight, setInsight] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  async function fetchInsight() {
+    if (insight) { setVisible(!visible); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/recommendations/explain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rec),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setInsight(d.llm_rationale || d.engine_rationale || "No insight available.");
+      } else {
+        setInsight("AI insights require an OpenAI API key.");
+      }
+      setVisible(true);
+    } catch { setInsight("Could not generate insight."); setVisible(true); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={fetchInsight}
+        disabled={loading}
+        className="flex items-center gap-1 text-xs text-accent/70 hover:text-accent transition-colors disabled:opacity-50"
+      >
+        {loading ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
+        {insight && visible ? "Hide AI" : "AI Insight"}
+      </button>
+      {visible && insight && (
+        <p className="mt-1.5 text-sm text-gray-300 leading-relaxed bg-accent/5 border border-accent/20 rounded-lg px-3 py-2">
+          {insight}
+        </p>
+      )}
+    </>
+  );
+}
+
+
 function RecCard({ rec, rank, mode }: { rec: Recommendation; rank: number; mode: ScoringMode }) {
   const [expanded, setExpanded] = useState(false);
   const isCategory = mode === "categories" && rec.per_cat_z;
@@ -186,15 +232,18 @@ function RecCard({ rec, rank, mode }: { rec: Recommendation; rank: number; mode:
             </div>
           )}
 
-          {/* Expandable rationale */}
-          <button
-            type="button"
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1 mt-2 text-xs text-muted hover:text-gray-300 transition-colors"
-          >
-            <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
-            {expanded ? "Less" : "Details"}
-          </button>
+          {/* Expandable rationale + AI insight */}
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="flex items-center gap-1 text-xs text-muted hover:text-gray-300 transition-colors"
+            >
+              <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+              {expanded ? "Less" : "Details"}
+            </button>
+            <AIInsightButton rec={rec} />
+          </div>
           {expanded && (
             <p className="mt-1.5 text-sm text-muted leading-relaxed">{rec.rationale}</p>
           )}

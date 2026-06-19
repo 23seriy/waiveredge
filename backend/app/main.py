@@ -19,6 +19,7 @@ from .api.billing import router as billing_router
 from .api.espn import router as espn_router
 from .api.leagues import router as leagues_router
 from .config import settings
+from .llm import enrich_recommendations, generate_rationale
 from .recommendations import fixture_build_status, manual_recommendations, sample_recommendations, top_streamers
 from .scoring.scoring_systems import CATEGORY_META, NINE_CAT
 from .sports import SPORTS, get_sport
@@ -81,7 +82,8 @@ def recommendations_sample(mode: Literal["points", "categories"] = "points", spo
     sc = get_sport(sport)
     if not sc.has_data:
         raise HTTPException(status_code=501, detail=f"{sc.name} data pipeline not yet available.")
-    return sample_recommendations(scoring_mode=mode, sport=sport)
+    result = sample_recommendations(scoring_mode=mode, sport=sport)
+    return result
 
 
 @app.post("/api/recommendations/manual")
@@ -100,6 +102,18 @@ def recommendations_manual(req: ManualRosterRequest) -> dict:
                     "unresolved": result["unresolved"]},
         )
     return result
+
+
+@app.post("/api/recommendations/explain")
+def explain_recommendation(rec: dict) -> dict:
+    """Generate an LLM-powered natural-language rationale for a recommendation."""
+    sport = rec.get("sport", "nba")
+    llm = generate_rationale(rec, sport)
+    return {
+        "llm_rationale": llm,
+        "engine_rationale": rec.get("rationale", ""),
+        "has_llm": llm is not None,
+    }
 
 
 @app.get("/api/streamers")
