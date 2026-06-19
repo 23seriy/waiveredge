@@ -1,0 +1,16 @@
+app = "waiveredge-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+
+[[services.http_checks]]
+  interval = 30000
+  timeout = 5000
+  path = "/health"

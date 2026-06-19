@@ -344,32 +344,51 @@ export default function Home() {
     setLoading(true);
     setError(null);
     const roster = rosterText.split("\n").map((s) => s.trim()).filter(Boolean);
-    try {
-      localStorage.setItem(STORAGE_KEY, rosterText);
-      const body: Record<string, unknown> = { roster, scoring_mode: mode, sport };
-      if (mode === "categories") body.categories = NINE_CAT;
-      const res = await fetch(`${API_BASE}/api/recommendations/manual`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const respBody = await res.json().catch(() => null);
-        const detail = respBody?.detail;
-        const msg = typeof detail === "string"
-          ? detail
-          : detail?.message || `Request failed (${res.status})`;
-        setError(msg);
-        setData(null);
-      } else {
+
+    const body: Record<string, unknown> = { roster, scoring_mode: mode, sport };
+    if (mode === "categories") body.categories = NINE_CAT;
+    localStorage.setItem(STORAGE_KEY, rosterText);
+
+    // Retry up to 2 times with 30s timeout.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        const res = await fetch(`${API_BASE}/api/recommendations/manual`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (res.status === 501) {
+          setError(`${SPORT_INFO[sport].name} data is still being prepared. Please try again in a few minutes.`);
+          setData(null);
+          break;
+        }
+        if (!res.ok) {
+          const respBody = await res.json().catch(() => null);
+          const detail = respBody?.detail;
+          setError(typeof detail === "string" ? detail : detail?.message || `Request failed (${res.status})`);
+          setData(null);
+          break;
+        }
         setData((await res.json()) as Payload);
+        break;
+      } catch (err) {
+        clearTimeout(timeout);
+        const isAbort = err instanceof DOMException && err.name === "AbortError";
+        if (attempt === 1 || !isAbort) {
+          setError(isAbort
+            ? "Request timed out. The server may be building data — try again in a minute."
+            : "Could not reach the server. Check that the backend is running.");
+          setData(null);
+        }
+        // First timeout → retry automatically.
       }
-    } catch {
-      setError(`Could not reach the API at ${API_BASE}. Start the backend: uvicorn app.main:app --reload`);
-      setData(null);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }
 
   function loadSample() {
