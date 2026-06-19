@@ -130,14 +130,14 @@ def build_real_fixtures(output_dir: Path, season: int | None = None) -> None:
             })
     print(f"[MLB] {len(schedule)} games in the week")
 
-    # Collect active rosters for all teams
+    # Collect rosters for all teams (active + 40-man to include IL players)
     print("[MLB] Fetching rosters...")
     players = []
     seen_ids: set[int] = set()
     for team in teams:
         try:
             roster_data = _get(f"teams/{team['id']}/roster", {
-                "rosterType": "active", "season": season,
+                "rosterType": "40Man", "season": season,
             })
             for entry in roster_data.get("roster", []):
                 pid = entry["person"]["id"]
