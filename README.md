@@ -169,11 +169,14 @@ unlocks the dormant role-bump / availability signals) and a documented SLA.
 - [x] Tailwind CSS UI redesign + Points/9-Cat mode toggle
 - [x] Yahoo OAuth league import + per-user recommendations
 - [x] Stripe billing + paywall scaffolding (free/Pro tiers)
-- [x] Multi-sport architecture (NBA live, MLB config-only)
+- [x] Multi-sport architecture (NBA + MLB)
+- [x] MLB data pipeline (real data from MLB Stats API)
+- [x] ESPN league import (team picker, no cookies for public leagues)
+- [x] Live injury alert system (scan + inbox + pickup opportunities)
+- [x] LLM-powered AI rationales (OpenAI gpt-4o-mini)
+- [x] Fixture caching + background builds (24h cache, progress polling)
+- [x] Home page UX redesign (hero, clean header, sport-aware)
 - [x] 46 unit tests (API + engine + service + scoring systems)
-- [ ] **MLB data pipeline** (MLB Stats API → fixtures)
-- [ ] Live injury **push/email alerts** (the killer feature)
-- [ ] ESPN league import (undocumented endpoints — build resilient)
+- [x] Deploy configs (Dockerfile, Railway, Fly.io, Vercel)
+- [ ] Deploy MVP to production
 - [ ] Nightly DvP recompute job + `team_dvp` cache
-- [ ] LLM-written rationales + injury-report parsing
-- [ ] Deploy MVP (Railway/Fly + Vercel)
