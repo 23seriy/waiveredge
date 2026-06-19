@@ -62,7 +62,8 @@ def _weekly(
 
 
 def _cat_raw(weekly: dict[str, float], cat: str, league_pct: dict[str, float]) -> float:
-    """Raw category value: counting total, or volume-weighted impact for percentages."""
+    """Raw category value: counting total, volume-weighted impact for percentages,
+    or computed ratio for rate stats (ERA, WHIP)."""
     meta = CATEGORY_META[cat]
     if meta.get("percentage"):
         att = weekly.get(meta["att"], 0.0)
@@ -70,6 +71,12 @@ def _cat_raw(weekly: dict[str, float], cat: str, league_pct: dict[str, float]) -
         if att <= 0:
             return 0.0
         return att * (made / att - league_pct.get(cat, 0.0))
+    if meta.get("rate"):
+        den = weekly.get(meta["den"], 0.0)
+        if den <= 0:
+            return 0.0
+        num = sum(weekly.get(s, 0.0) for s in meta["num"])
+        return (num / den) * meta.get("scale", 1.0)
     return weekly.get(meta["stat"], 0.0)
 
 
