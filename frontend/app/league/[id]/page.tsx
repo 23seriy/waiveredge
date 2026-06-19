@@ -7,6 +7,7 @@ import {
   ArrowUpDown,
   Calendar,
   ChevronDown,
+  Crown,
   Flame,
   Loader2,
   RefreshCw,
@@ -123,7 +124,11 @@ export default function LeaguePage() {
       ]);
       if (!lr.ok) throw new Error(`League fetch failed (${lr.status})`);
       setLeague((await lr.json()) as LeagueInfo);
-      if (rr.ok) setRecs((await rr.json()) as RecsPayload);
+      if (rr.status === 402) {
+        setError("__paywall__");
+      } else if (rr.ok) {
+        setRecs((await rr.json()) as RecsPayload);
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -166,7 +171,17 @@ export default function LeaguePage() {
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {loading && <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-accent" /><span className="ml-2 text-muted">Loading…</span></div>}
-        {error && <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6"><p className="text-sm text-neg">{error}</p></div>}
+        {error === "__paywall__" && (
+          <div className="rounded-xl border-2 border-accent bg-accent/5 p-6 text-center mb-6">
+            <Crown size={28} className="text-accent mx-auto mb-2" />
+            <h3 className="text-lg font-bold mb-1">Upgrade to Pro</h3>
+            <p className="text-sm text-muted mb-4">Personalized league recommendations require WaiverEdge Pro.</p>
+            <Link href="/pricing" className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg hover:opacity-90">
+              <Crown size={14} /> View pricing
+            </Link>
+          </div>
+        )}
+        {error && error !== "__paywall__" && <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6"><p className="text-sm text-neg">{error}</p></div>}
 
         {league && !loading && (
           <>

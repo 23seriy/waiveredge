@@ -14,6 +14,7 @@ from ..data.yahoo import YahooFantasyClient
 from ..db import get_db
 from ..models import LeagueConnection, RosterEntry
 from ..recommendations import build_recommendations, load_fixtures, resolve_names
+from .paywall import require_pro
 
 router = APIRouter(prefix="/api/leagues", tags=["leagues"])
 
@@ -109,6 +110,7 @@ def get_league(connection_id: int, db: Session = Depends(get_db)) -> dict:
 @router.post("/{connection_id}/sync")
 def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     """Refresh the roster and free agents. Supports Yahoo and ESPN."""
+    require_pro(connection_id, db)
     conn = _get_connection(connection_id, db)
 
     if conn.platform == "espn":
@@ -217,6 +219,7 @@ def _sync_yahoo(conn: LeagueConnection, db: Session) -> dict:
 @router.get("/{connection_id}/recs")
 def league_recommendations(connection_id: int, db: Session = Depends(get_db)) -> dict:
     """Personalized recommendations for a connected league."""
+    require_pro(connection_id, db)
     conn = _get_connection(connection_id, db)
     roster_entries = db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).all()
     if not roster_entries:
