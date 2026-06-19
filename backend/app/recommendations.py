@@ -7,6 +7,8 @@ is wired up, the same function consumes rows loaded from Postgres.
 from __future__ import annotations
 
 import json
+import threading
+import time as _time
 import unicodedata
 from dataclasses import asdict
 from pathlib import Path
@@ -20,35 +22,120 @@ from .sports import get_sport
 from .scoring.types import GameLog, Injury, Player, Projection, ScheduledGame
 
 DATA_DIR = Path(__file__).resolve().parents[1]
-SAMPLE_DIR = DATA_DIR / "sample_data"        # NBA fixtures (default)
-MLB_DATA_DIR = DATA_DIR / "sample_data_mlb"   # MLB fixtures
 
+SPORT_DIRS: dict[str, Path] = {
+    "nba": DATA_DIR / "sample_data",
+    "mlb": DATA_DIR / "sample_data_mlb",
+}
 
 FIXTURE_FILES = ("teams", "players", "game_logs", "schedule", "injuries", "roster")
 
+# Max age before fixtures are considered stale and need rebuild (24 hours).
+CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
+
+# In-memory build state tracking (per sport).
+_build_locks: dict[str, threading.Lock] = {}
+_build_status: dict[str, dict] = {}
+
+
+def _get_lock(sport: str) -> threading.Lock:
+    if sport not in _build_locks:
+        _build_locks[sport] = threading.Lock()
+    return _build_locks[sport]
+
+
+def fixture_build_status(sport: str) -> dict:
+    """Return the current build status for a sport's fixtures."""
+    data_dir = SPORT_DIRS.get(sport, SPORT_DIRS["nba"])
+    roster_file = data_dir / "roster.json"
+    has_data = roster_file.exists()
+    age_seconds = (_time.time() - roster_file.stat().st_mtime) if has_data else None
+    is_stale = age_seconds is not None and age_seconds > CACHE_MAX_AGE_SECONDS
+    status = _build_status.get(sport, {})
+    return {
+        "sport": sport,
+        "has_data": has_data,
+        "is_stale": is_stale,
+        "age_seconds": round(age_seconds) if age_seconds is not None else None,
+        "building": status.get("building", False),
+        "progress": status.get("progress", ""),
+    }
+
+
+def _is_fresh(sport: str) -> bool:
+    """Check if fixtures exist and are younger than CACHE_MAX_AGE_SECONDS."""
+    data_dir = SPORT_DIRS.get(sport, SPORT_DIRS["nba"])
+    roster_file = data_dir / "roster.json"
+    if not roster_file.exists():
+        return False
+    age = _time.time() - roster_file.stat().st_mtime
+    return age < CACHE_MAX_AGE_SECONDS
+
+
+def _build_fixtures_background(sport: str) -> None:
+    """Build fixtures in a background thread."""
+    lock = _get_lock(sport)
+    if not lock.acquire(blocking=False):
+        return  # Another build is already running
+    try:
+        _build_status[sport] = {"building": True, "progress": "Starting..."}
+        data_dir = SPORT_DIRS.get(sport, SPORT_DIRS["nba"])
+        if sport == "mlb":
+            from .data.mlb_fixtures import build_real_fixtures
+            build_real_fixtures(data_dir)
+        else:
+            from .data.nba_fixtures import build_real_fixtures
+            build_real_fixtures(data_dir)
+        _build_status[sport] = {"building": False, "progress": "Complete"}
+    except Exception as e:
+        _build_status[sport] = {"building": False, "progress": f"Error: {e}"}
+    finally:
+        lock.release()
+
+
+def ensure_fixtures(sport: str) -> bool:
+    """Ensure fixtures exist. If missing/stale, start a background build.
+
+    Returns True if fixtures are ready to serve, False if building.
+    """
+    if _is_fresh(sport):
+        return True
+    # Check if already building.
+    status = _build_status.get(sport, {})
+    if status.get("building"):
+        return False
+    # Start background build.
+    thread = threading.Thread(target=_build_fixtures_background, args=(sport,), daemon=True)
+    thread.start()
+    # If fixtures exist (just stale), serve them while rebuilding.
+    data_dir = SPORT_DIRS.get(sport, SPORT_DIRS["nba"])
+    return (data_dir / "roster.json").exists()
+
 
 def load_fixtures(sport: str = "nba") -> dict:
-    """Load real fixtures for a sport, materializing from the API if absent."""
-    if sport == "mlb":
-        return _load_mlb_fixtures()
-    return _load_nba_fixtures()
+    """Load real fixtures for a sport.
 
+    If fixtures are missing, blocks until built (first use only).
+    If stale, serves cached data and rebuilds in background.
+    """
+    data_dir = SPORT_DIRS.get(sport, SPORT_DIRS["nba"])
+    roster_file = data_dir / "roster.json"
 
-def _load_nba_fixtures() -> dict:
-    """Load the real NBA fixtures, materializing them from stats.nba.com if absent."""
-    if not (SAMPLE_DIR / "roster.json").exists():
-        from .data.nba_fixtures import build_real_fixtures
-        build_real_fixtures(SAMPLE_DIR)
-    return {name: json.loads((SAMPLE_DIR / f"{name}.json").read_text())
-            for name in FIXTURE_FILES}
+    if roster_file.exists():
+        # Serve cached data. Trigger background rebuild if stale.
+        if not _is_fresh(sport):
+            status = _build_status.get(sport, {})
+            if not status.get("building"):
+                thread = threading.Thread(target=_build_fixtures_background, args=(sport,), daemon=True)
+                thread.start()
+        return {name: json.loads((data_dir / f"{name}.json").read_text())
+                for name in FIXTURE_FILES}
 
-
-def _load_mlb_fixtures() -> dict:
-    """Load real MLB fixtures, materializing from statsapi.mlb.com if absent."""
-    if not (MLB_DATA_DIR / "roster.json").exists():
-        from .data.mlb_fixtures import build_real_fixtures
-        build_real_fixtures(MLB_DATA_DIR)
-    return {name: json.loads((MLB_DATA_DIR / f"{name}.json").read_text())
+    # No fixtures at all — must build (blocking for first use).
+    _build_fixtures_background(sport)
+    if not roster_file.exists():
+        raise RuntimeError(f"Failed to build {sport} fixtures")
+    return {name: json.loads((data_dir / f"{name}.json").read_text())
             for name in FIXTURE_FILES}
 
 
