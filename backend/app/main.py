@@ -7,6 +7,7 @@ import + ingestion are wired up (see app/data/ingest.py).
 """
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
@@ -21,6 +22,7 @@ from .api.leagues import router as leagues_router
 from .config import settings
 from .llm import enrich_recommendations, generate_rationale
 from .recommendations import fixture_build_status, manual_recommendations, sample_recommendations, top_streamers
+from .scheduler import start_scheduler
 from .scoring.scoring_systems import CATEGORY_META, NINE_CAT
 from .sports import SPORTS, get_sport
 
@@ -40,7 +42,13 @@ class ManualRosterRequest(BaseModel):
                     "Defaults to the standard 9-cat set.")
     sport: str = Field(default="nba", description="Sport key (nba, mlb).")
 
-app = FastAPI(title="WaiverEdge API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(a):
+    start_scheduler()
+    yield
+
+
+app = FastAPI(title="WaiverEdge API", version="0.1.0", lifespan=lifespan)
 app.include_router(alerts_router)
 app.include_router(auth_router)
 app.include_router(billing_router)
