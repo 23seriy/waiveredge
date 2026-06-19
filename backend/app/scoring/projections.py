@@ -7,7 +7,7 @@ to trust an "add this player" recommendation.
 """
 from __future__ import annotations
 
-from .scoring_systems import DEFAULT_POINTS_SCORING, RAW_STATS, fantasy_points
+from .scoring_systems import DEFAULT_POINTS_SCORING, fantasy_points
 from .types import GameLog, Projection
 
 # Exponential recency decay: the most recent game is weighted 1.0, the previous
@@ -31,18 +31,23 @@ def project_player(
     w = weights or DEFAULT_POINTS_SCORING
     ordered = sorted(logs, key=lambda lg: lg.date, reverse=True)
 
+    # Collect all stat keys present in this player's logs (sport-agnostic).
+    all_keys: set[str] = set()
+    for lg in ordered:
+        all_keys.update(lg.stats.keys())
+
     weighted_sum = 0.0
     weight_total = 0.0
-    per_game_sum: dict[str, float] = {s: 0.0 for s in RAW_STATS}
+    per_game_sum: dict[str, float] = {s: 0.0 for s in all_keys}
     for i, lg in enumerate(ordered):
         wt = decay ** i
         weighted_sum += fantasy_points(lg.stats, w) * wt
         weight_total += wt
-        for s in RAW_STATS:
+        for s in all_keys:
             per_game_sum[s] += float(lg.stats.get(s, 0) or 0) * wt
 
     fppg = weighted_sum / weight_total if weight_total else 0.0
-    per_game = {s: round(per_game_sum[s] / weight_total, 3) for s in RAW_STATS} if weight_total else {}
+    per_game = {s: round(per_game_sum[s] / weight_total, 3) for s in all_keys} if weight_total else {}
     return Projection(
         player_id=ordered[0].player_id,
         fppg=round(fppg, 2),
