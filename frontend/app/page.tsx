@@ -1,14 +1,12 @@
 "use client";
 
-// Manual roster input → POST /api/recommendations/manual. This is the bridge to
-// "for YOUR roster" recommendations before Yahoo OAuth lands; the request/response
-// shape is intentionally the same the OAuth-backed endpoint will use.
-
 import { useEffect, useState } from "react";
 import {
+  ArrowRight,
   ArrowUpDown,
   Calendar,
   ChevronDown,
+  ExternalLink,
   Flame,
   Loader2,
   RotateCcw,
@@ -50,9 +48,15 @@ const STORAGE_KEY = "waiveredge.roster.v1";
 const MODE_KEY = "waiveredge.mode.v1";
 const SPORT_KEY = "waiveredge.sport.v1";
 
-const SPORT_INFO: Record<Sport, { icon: string; name: string; hasData: boolean }> = {
-  nba: { icon: "\u{1F3C0}", name: "NBA", hasData: true },
-  mlb: { icon: "\u26BE", name: "MLB", hasData: true },
+const SPORT_INFO: Record<Sport, { icon: string; name: string; hasData: boolean; sample: string }> = {
+  nba: {
+    icon: "\u{1F3C0}", name: "NBA", hasData: true,
+    sample: "Nikola Jokic\nLuka Doncic\nAnthony Edwards\nJaren Jackson Jr.\nTyrese Haliburton\nBam Adebayo\nJalen Brunson\nTrae Young\nDomantas Sabonis\nScottie Barnes",
+  },
+  mlb: {
+    icon: "\u26BE", name: "MLB", hasData: true,
+    sample: "Aaron Judge\nShohei Ohtani\nMookie Betts\nFreddie Freeman\nCorbin Carroll\nJulio Rodriguez\nBobby Witt Jr.\nCorey Seager\nRonald Acuna Jr.\nMatt Olson",
+  },
 };
 
 const CAT_LABELS: Record<string, string> = {
@@ -61,19 +65,6 @@ const CAT_LABELS: Record<string, string> = {
 };
 
 const NINE_CAT = ["fg_pct", "ft_pct", "fg3m", "pts", "reb", "ast", "stl", "blk", "turnover"];
-
-const SAMPLE_ROSTER = [
-  "Nikola Jokic",
-  "Luka Doncic",
-  "Anthony Edwards",
-  "Jaren Jackson Jr.",
-  "Tyrese Haliburton",
-  "Bam Adebayo",
-  "Jalen Brunson",
-  "Trae Young",
-  "Domantas Sabonis",
-  "Scottie Barnes",
-].join("\n");
 
 
 function SportToggle({ sport, onChange }: { sport: Sport; onChange: (s: Sport) => void }) {
@@ -84,7 +75,7 @@ function SportToggle({ sport, onChange }: { sport: Sport; onChange: (s: Sport) =
           key={s}
           type="button"
           onClick={() => onChange(s)}
-          className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             sport === s ? "bg-accent text-bg" : "text-muted hover:text-gray-200"
           }`}
         >
@@ -281,7 +272,7 @@ export default function Home() {
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-    setRosterText(saved && saved.trim() ? saved : SAMPLE_ROSTER);
+    setRosterText(saved && saved.trim() ? saved : SPORT_INFO["nba"].sample);
     const savedMode = typeof window !== "undefined" ? localStorage.getItem(MODE_KEY) : null;
     if (savedMode === "points" || savedMode === "categories") setMode(savedMode);
     const savedSport = typeof window !== "undefined" ? localStorage.getItem(SPORT_KEY) : null;
@@ -333,62 +324,80 @@ export default function Home() {
   }
 
   function loadSample() {
-    setRosterText(SAMPLE_ROSTER);
+    setRosterText(SPORT_INFO[sport].sample);
   }
 
   return (
     <div className="min-h-screen bg-bg">
-      {/* Header */}
+      {/* Header — clean, minimal */}
       <header className="border-b border-line bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center">
               <Zap size={16} className="text-bg" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight">WaiverEdge</h1>
+            <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/streamers"
-              className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors"
-            >
+          <nav className="flex items-center gap-4">
+            <Link href="/streamers" className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">
               <Flame size={14} /> Streamers
             </Link>
-            <Link
-              href="/connect"
-              className="text-sm text-muted hover:text-accent transition-colors"
-            >
-              Connect Yahoo
+            <Link href="/pricing" className="text-sm text-muted hover:text-accent transition-colors">
+              Pricing
             </Link>
-            <Link
-              href="/pricing"
-              className="text-sm font-medium text-accent hover:text-accent/80 transition-colors"
-            >
-              Pro
-            </Link>
-            <SportToggle sport={sport} onChange={handleSportChange} />
-            <ModeToggle mode={mode} onChange={handleModeChange} />
-          </div>
+          </nav>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        {/* Hero text */}
-        <div className="mb-6">
-          <p className="text-muted text-sm leading-relaxed max-w-xl">
-            Paste your fantasy roster below — the engine fuses schedule density,
-            matchups, and injuries to rank the best waiver pickups for{" "}
-            <em className="text-gray-200 not-italic font-medium">your</em> team this week.
-            {mode === "categories" && (
-              <span className="text-accent"> 9-Cat mode: recommendations ranked by z-score impact.</span>
-            )}
+      <main className="max-w-4xl mx-auto px-4">
+        {/* Hero section */}
+        <section className="py-12 md:py-16 text-center">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+            Know exactly who to pick up<br />
+            <span className="text-accent">for your roster, this week</span>
+          </h1>
+          <p className="text-muted text-base max-w-xl mx-auto mb-8 leading-relaxed">
+            WaiverEdge fuses schedule density, matchups, and injuries into one ranked
+            action list — the waiver move-finder for NBA and MLB fantasy managers.
           </p>
+
+          {/* Primary CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+            <Link
+              href="/connect"
+              className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
+            >
+              Connect your league <ArrowRight size={16} />
+            </Link>
+            <Link
+              href="/streamers"
+              className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
+            >
+              <Flame size={14} /> Free weekly streamers
+            </Link>
+          </div>
+
+          <p className="text-xs text-muted">
+            Works with Yahoo and ESPN &middot; NBA &amp; MLB &middot; Points and 9-Cat leagues
+          </p>
+        </section>
+
+        {/* Sport + Mode controls */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+          <SportToggle sport={sport} onChange={handleSportChange} />
+          <ModeToggle mode={mode} onChange={handleModeChange} />
         </div>
 
         {/* Fixture status check */}
         <FixtureStatus sport={sport} />
 
-        {/* Form */}
+        {/* Manual roster section */}
+        <section className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold">Quick Roster Check</h2>
+            <p className="text-xs text-muted">or <Link href="/connect" className="text-accent hover:underline">connect your league</Link> for full features</p>
+          </div>
+
         <form onSubmit={submit} className="mb-8">
           <div className="rounded-xl border border-line bg-card overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-surface/50">
@@ -487,6 +496,7 @@ export default function Home() {
             )}
           </>
         )}
+        </section>
       </main>
 
       {/* Footer */}
