@@ -53,11 +53,23 @@ def _norm_pos(pos_abbr: str | None) -> list[str]:
 
 
 def _select_week(season: int) -> tuple[str, str]:
-    """Pick a representative mid-season week (densest week in the middle third).
+    """Select the current real-world week (Monday–Sunday).
 
-    MLB regular season is roughly April–September. We pick from the middle third
-    (late May – late July) to avoid opening-week weirdness and September callups.
+    If today falls within the regular season window (April–September), use the
+    current calendar week.  Otherwise fall back to the densest mid-season week
+    so the app still works in the offseason with cached fixtures.
     """
+    today = date_cls.today()
+    season_start = date_cls(season, 3, 20)
+    season_end = date_cls(season, 10, 5)
+
+    if season_start <= today <= season_end:
+        # Current week: Monday through Sunday
+        monday = today - timedelta(days=today.weekday())
+        sunday = monday + timedelta(days=6)
+        return (monday.isoformat(), sunday.isoformat())
+
+    # Offseason fallback — pick densest week from mid-season schedule
     data = _get("schedule", {
         "sportId": SPORT_ID, "season": season, "gameType": "R",
         "startDate": f"{season}-04-01", "endDate": f"{season}-09-30",
@@ -66,13 +78,11 @@ def _select_week(season: int) -> tuple[str, str]:
     if not dates:
         return (f"{season}-06-16", f"{season}-06-22")
 
-    # Middle third
     n = len(dates)
     mid_dates = dates[n // 3: 2 * n // 3]
     if not mid_dates:
         mid_dates = dates
 
-    # Find the densest 7-day window
     best_start = 0
     best_count = 0
     for i in range(len(mid_dates)):
