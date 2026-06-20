@@ -320,6 +320,7 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
         ]
     schedule_grid = [
         {"team_id": tid, "abbreviation": teams_by_id[tid]["abbreviation"],
+         "team_name": teams_by_id[tid].get("full_name", teams_by_id[tid]["abbreviation"]),
          "games": len(gs), "matchups": gs}
         for tid, gs in sorted(team_games.items(), key=lambda kv: len(kv[1]), reverse=True)
     ]
@@ -338,6 +339,8 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
             "name": p.name,
             "position": "/".join(p.positions),
             "team": teams_by_id.get(p.team_id, {}).get("abbreviation", "?"),
+            "team_id": p.team_id,
+            "team_name": teams_by_id.get(p.team_id, {}).get("full_name", "?"),
             "n_games": vr.n_games,
             "soft_matchups": vr.soft_matchups,
             "fppg": proj.fppg,

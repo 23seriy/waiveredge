@@ -19,6 +19,7 @@ type Matchup = { opponent: string; mult: number };
 type TeamSchedule = {
   team_id: number;
   abbreviation: string;
+  team_name?: string;
   games: number;
   matchups: { date: string; opponent: string }[];
 };
@@ -27,6 +28,8 @@ type Streamer = {
   name: string;
   position: string;
   team: string;
+  team_id?: number;
+  team_name?: string;
   n_games: number;
   soft_matchups: number;
   fppg: number;
@@ -44,6 +47,22 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 function formatDate(iso: string) {
   const d = new Date(iso + "T12:00:00");
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function TeamLogo({ teamId, size = 20 }: { teamId: number; size?: number }) {
+  const [err, setErr] = useState(false);
+  if (err) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://midfield.mlbstatic.com/v1/team/${teamId}/spots/${size * 2}`}
+      alt=""
+      width={size}
+      height={size}
+      className="inline-block"
+      onError={() => setErr(true)}
+    />
+  );
 }
 
 function MultBadge({ mult }: { mult: number }) {
@@ -90,7 +109,13 @@ function ScheduleGrid({ grid, week }: { grid: TeamSchedule[]; week: { start: str
             key={t.team_id}
             className={`rounded-lg border p-3 text-center transition-colors ${tierStyle(t.games)}`}
           >
-            <div className="text-sm font-bold">{t.abbreviation}</div>
+            <div className="flex items-center justify-center gap-1.5">
+              <TeamLogo teamId={t.team_id} size={20} />
+              <span className="text-sm font-bold">{t.abbreviation}</span>
+            </div>
+            {t.team_name && (
+              <div className="text-[10px] text-muted mt-0.5">{t.team_name}</div>
+            )}
             <div className="flex items-center justify-center gap-0.5 mt-1">
               {Array.from({ length: t.games }).map((_, i) => (
                 <div
@@ -157,8 +182,9 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
           <div className="flex items-baseline gap-2 flex-wrap">
             <h3 className="text-base font-semibold text-gray-100">{s.name}</h3>
             <span className="text-sm text-muted">{s.position}</span>
-            <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono">
-              {s.team}
+            <span className="inline-flex items-center gap-1 text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono">
+              {s.team_id && <TeamLogo teamId={s.team_id} size={14} />}
+              {s.team_name || s.team}
             </span>
             {rank <= 3 && (
               <span className="text-xs bg-accent/15 text-accent rounded-full px-2 py-0.5 font-medium flex items-center gap-0.5">
