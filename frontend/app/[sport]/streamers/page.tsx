@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   Calendar,
   ChevronDown,
@@ -55,7 +56,19 @@ function MultBadge({ mult }: { mult: number }) {
 function ScheduleGrid({ grid, week }: { grid: TeamSchedule[]; week: { start: string; end: string } }) {
   const [showAll, setShowAll] = useState(false);
   const maxGames = grid[0]?.games ?? 0;
-  const displayed = showAll ? grid : grid.filter((t) => t.games >= maxGames - 1);
+  const displayed = showAll ? grid : grid.filter((t) => t.games === maxGames);
+
+  function tierStyle(games: number) {
+    if (games === maxGames) return "border-accent/50 bg-accent/10";
+    if (games === maxGames - 1) return "border-accent/20 bg-accent/5 opacity-90";
+    return "border-line bg-card opacity-60";
+  }
+
+  function barColor(games: number) {
+    if (games === maxGames) return "bg-accent";
+    if (games === maxGames - 1) return "bg-accent/50";
+    return "bg-muted/40";
+  }
 
   return (
     <section className="mb-10">
@@ -75,28 +88,26 @@ function ScheduleGrid({ grid, week }: { grid: TeamSchedule[]; week: { start: str
         {displayed.map((t) => (
           <div
             key={t.team_id}
-            className={`rounded-lg border p-3 text-center transition-colors ${
-              t.games === maxGames
-                ? "border-accent/50 bg-accent/10"
-                : "border-line bg-card"
-            }`}
+            className={`rounded-lg border p-3 text-center transition-colors ${tierStyle(t.games)}`}
           >
             <div className="text-sm font-bold">{t.abbreviation}</div>
             <div className="flex items-center justify-center gap-0.5 mt-1">
               {Array.from({ length: t.games }).map((_, i) => (
                 <div
                   key={i}
-                  className={`h-2 w-4 rounded-sm ${
-                    t.games === maxGames ? "bg-accent" : "bg-muted/50"
-                  }`}
+                  className={`h-2 w-4 rounded-sm ${barColor(t.games)}`}
                 />
               ))}
             </div>
             <div className="text-xs text-muted mt-1.5">
               {t.games} game{t.games !== 1 ? "s" : ""}
             </div>
-            <div className="text-[10px] text-muted mt-0.5">
-              {t.matchups.map((m) => m.opponent).join(", ")}
+            <div className="flex flex-wrap justify-center gap-x-1 gap-y-0 mt-0.5">
+              {t.matchups.map((m, i) => (
+                <span key={i} className="text-[10px] text-muted">
+                  {m.opponent}{i < t.matchups.length - 1 ? "," : ""}
+                </span>
+              ))}
             </div>
           </div>
         ))}
@@ -237,6 +248,13 @@ export default function StreamersPage() {
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-8">
+      <Link
+        href={`/${sport}`}
+        className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors mb-4"
+      >
+        <ArrowLeft size={12} /> Back to {sport.toUpperCase()} Dashboard
+      </Link>
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-2">
           <Flame size={22} className="text-accent" />
