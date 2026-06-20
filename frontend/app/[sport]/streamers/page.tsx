@@ -1,10 +1,7 @@
 "use client";
 
-// Public "top streamers this week" page — no roster, no auth, free content.
-// Designed for SEO (server-side indexable title/description) and Reddit/X sharing.
-// CTA funnels to the personalized roster tool at /.
-
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import {
   ArrowRight,
   Calendar,
@@ -58,7 +55,6 @@ function MultBadge({ mult }: { mult: number }) {
 function ScheduleGrid({ grid, week }: { grid: TeamSchedule[]; week: { start: string; end: string } }) {
   const [showAll, setShowAll] = useState(false);
   const maxGames = grid[0]?.games ?? 0;
-  const busiest = grid.filter((t) => t.games === maxGames);
   const displayed = showAll ? grid : grid.filter((t) => t.games >= maxGames - 1);
 
   return (
@@ -136,7 +132,6 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
       }`}
     >
       <div className="flex gap-4 items-start">
-        {/* Rank + projected */}
         <div className="flex flex-col items-center shrink-0 w-12">
           <span className={`text-xs font-medium ${rank <= 3 ? "text-accent" : "text-muted"}`}>
             #{rank}
@@ -147,7 +142,6 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
           <span className="text-[10px] text-muted">fpts</span>
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <h3 className="text-base font-semibold text-gray-100">{s.name}</h3>
@@ -162,7 +156,6 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
             )}
           </div>
 
-          {/* Stats row */}
           <div className="flex items-center gap-3 mt-1.5 text-sm text-muted">
             <span className="flex items-center gap-1">
               <Calendar size={12} /> {s.n_games} game{s.n_games !== 1 ? "s" : ""}
@@ -175,7 +168,6 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
             )}
           </div>
 
-          {/* Matchup chips */}
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
@@ -223,12 +215,17 @@ function SkeletonRow() {
 
 
 export default function StreamersPage() {
+  const params = useParams();
+  const sport = params.sport as string;
   const [data, setData] = useState<StreamersPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/streamers?top=30`)
+    setLoading(true);
+    setError(null);
+    setData(null);
+    fetch(`${API_BASE}/api/streamers?top=30&sport=${sport}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(`API error ${res.status}`);
         return res.json();
@@ -236,110 +233,77 @@ export default function StreamersPage() {
       .then((d) => setData(d as StreamersPayload))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [sport]);
 
   return (
-    <div className="min-h-screen bg-bg">
-      {/* Header */}
-      <header className="border-b border-line bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center">
-              <Zap size={16} className="text-bg" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
-          >
-            Your roster <ArrowRight size={14} />
-          </Link>
-        </div>
-      </header>
+    <main className="max-w-4xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-2">
+          <Flame size={22} className="text-accent" />
+          Top Streamers This Week
+        </h1>
+        <p className="text-sm text-muted leading-relaxed max-w-2xl">
+          The best fantasy streaming pickups ranked by projected value.
+          Schedule density × matchups × recent form — real sports data, updated weekly.
+        </p>
+      </div>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Title */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-2">
-            <Flame size={22} className="text-accent" />
-            Top Streamers This Week
-          </h1>
-          <p className="text-sm text-muted leading-relaxed max-w-2xl">
-            The best fantasy streaming pickups ranked by projected value.
-            Schedule density × matchups × recent form — real sports data, updated weekly.
-          </p>
+      {error && (
+        <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6">
+          <p className="text-sm text-neg">{error}</p>
         </div>
+      )}
 
-        {/* Error */}
-        {error && (
-          <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6">
-            <p className="text-sm text-neg">{error}</p>
+      {loading && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-10">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="rounded-lg border border-line bg-card p-3 animate-pulse">
+                <div className="h-4 w-10 mx-auto rounded bg-line" />
+                <div className="h-2 w-16 mx-auto rounded bg-line mt-2" />
+              </div>
+            ))}
           </div>
-        )}
+          {[1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}
+        </div>
+      )}
 
-        {/* Loading */}
-        {loading && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-10">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="rounded-lg border border-line bg-card p-3 animate-pulse">
-                  <div className="h-4 w-10 mx-auto rounded bg-line" />
-                  <div className="h-2 w-16 mx-auto rounded bg-line mt-2" />
-                </div>
+      {data && !loading && (
+        <>
+          <ScheduleGrid grid={data.schedule_grid} week={data.week} />
+
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold flex items-center gap-2">
+                <TrendingUp size={16} className="text-pos" /> Top Streaming Pickups
+              </h2>
+              <span className="text-xs text-muted">
+                {data.streamers.length} players · by projected fpts
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {data.streamers.map((s, i) => (
+                <StreamerRow key={s.player_id} s={s} rank={i + 1} />
               ))}
             </div>
-            {[1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}
+          </section>
+
+          <div className="mt-12 rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
+            <h3 className="text-lg font-bold mb-2">Want picks for YOUR roster?</h3>
+            <p className="text-sm text-muted mb-4 max-w-md mx-auto">
+              The streamers above are generic. Paste your roster and the engine ranks who to
+              add and who to drop — personalized value-over-replacement.
+            </p>
+            <Link
+              href={`/${sport}`}
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
+            >
+              <Zap size={16} /> Rank adds for my team <ArrowRight size={14} />
+            </Link>
           </div>
-        )}
-
-        {/* Content */}
-        {data && !loading && (
-          <>
-            <ScheduleGrid grid={data.schedule_grid} week={data.week} />
-
-            {/* Streamers list */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-semibold flex items-center gap-2">
-                  <TrendingUp size={16} className="text-pos" /> Top Streaming Pickups
-                </h2>
-                <span className="text-xs text-muted">
-                  {data.streamers.length} players · by projected fpts
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {data.streamers.map((s, i) => (
-                  <StreamerRow key={s.player_id} s={s} rank={i + 1} />
-                ))}
-              </div>
-            </section>
-
-            {/* CTA */}
-            <div className="mt-12 rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
-              <h3 className="text-lg font-bold mb-2">Want picks for YOUR roster?</h3>
-              <p className="text-sm text-muted mb-4 max-w-md mx-auto">
-                The streamers above are generic. Paste your roster and the engine ranks who to
-                add and who to drop — personalized value-over-replacement.
-              </p>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
-              >
-                <Zap size={16} /> Rank adds for my team <ArrowRight size={14} />
-              </Link>
-            </div>
-          </>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-line mt-16 py-6">
-        <p className="text-center text-xs text-muted">
-          WaiverEdge · Real sports data · No logos or trademarks used
-        </p>
-      </footer>
-    </div>
+        </>
+      )}
+    </main>
   );
 }
