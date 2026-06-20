@@ -31,7 +31,8 @@ from .types import (
 )
 
 # Players need at least this many sampled games to enter the z-score reference pool.
-MIN_REF_GAMES = 3
+# Kept at 2 so MLB pitchers (who start every 5 days) still qualify with limited log history.
+MIN_REF_GAMES = 2
 # A weak-category add must clear this z in a category to be called "helpful" there.
 HELP_Z_THRESHOLD = 0.25
 
