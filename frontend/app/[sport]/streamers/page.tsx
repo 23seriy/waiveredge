@@ -1,11 +1,9 @@
 "use client";
 
-// Public "top streamers this week" page — no roster, no auth, free content.
-// Designed for SEO (server-side indexable title/description) and Reddit/X sharing.
-// CTA funnels to the personalized roster tool at /.
-
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   Calendar,
   ChevronDown,
@@ -21,6 +19,7 @@ type Matchup = { opponent: string; mult: number };
 type TeamSchedule = {
   team_id: number;
   abbreviation: string;
+  team_name?: string;
   games: number;
   matchups: { date: string; opponent: string }[];
 };
@@ -29,6 +28,8 @@ type Streamer = {
   name: string;
   position: string;
   team: string;
+  team_id?: number;
+  team_name?: string;
   n_games: number;
   soft_matchups: number;
   fppg: number;
@@ -48,6 +49,22 @@ function formatDate(iso: string) {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+function TeamLogo({ teamId, size = 20 }: { teamId: number; size?: number }) {
+  const [err, setErr] = useState(false);
+  if (err) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://midfield.mlbstatic.com/v1/team/${teamId}/spots/${size * 2}`}
+      alt=""
+      width={size}
+      height={size}
+      className="inline-block"
+      onError={() => setErr(true)}
+    />
+  );
+}
+
 function MultBadge({ mult }: { mult: number }) {
   if (mult >= 1.08) return <span className="text-pos text-xs font-medium">soft</span>;
   if (mult <= 0.92) return <span className="text-neg text-xs font-medium">tough</span>;
@@ -58,8 +75,19 @@ function MultBadge({ mult }: { mult: number }) {
 function ScheduleGrid({ grid, week }: { grid: TeamSchedule[]; week: { start: string; end: string } }) {
   const [showAll, setShowAll] = useState(false);
   const maxGames = grid[0]?.games ?? 0;
-  const busiest = grid.filter((t) => t.games === maxGames);
-  const displayed = showAll ? grid : grid.filter((t) => t.games >= maxGames - 1);
+  const displayed = showAll ? grid : grid.filter((t) => t.games === maxGames);
+
+  function tierStyle(games: number) {
+    if (games === maxGames) return "border-accent/50 bg-accent/10";
+    if (games === maxGames - 1) return "border-accent/20 bg-accent/5 opacity-90";
+    return "border-line bg-card opacity-60";
+  }
+
+  function barColor(games: number) {
+    if (games === maxGames) return "bg-accent";
+    if (games === maxGames - 1) return "bg-accent/50";
+    return "bg-muted/40";
+  }
 
   return (
     <section className="mb-10">
@@ -79,28 +107,32 @@ function ScheduleGrid({ grid, week }: { grid: TeamSchedule[]; week: { start: str
         {displayed.map((t) => (
           <div
             key={t.team_id}
-            className={`rounded-lg border p-3 text-center transition-colors ${
-              t.games === maxGames
-                ? "border-accent/50 bg-accent/10"
-                : "border-line bg-card"
-            }`}
+            className={`rounded-lg border p-3 text-center transition-colors ${tierStyle(t.games)}`}
           >
-            <div className="text-sm font-bold">{t.abbreviation}</div>
+            <div className="flex items-center justify-center gap-1.5">
+              <TeamLogo teamId={t.team_id} size={20} />
+              <span className="text-sm font-bold">{t.abbreviation}</span>
+            </div>
+            {t.team_name && (
+              <div className="text-[10px] text-muted mt-0.5">{t.team_name}</div>
+            )}
             <div className="flex items-center justify-center gap-0.5 mt-1">
               {Array.from({ length: t.games }).map((_, i) => (
                 <div
                   key={i}
-                  className={`h-2 w-4 rounded-sm ${
-                    t.games === maxGames ? "bg-accent" : "bg-muted/50"
-                  }`}
+                  className={`h-2 w-4 rounded-sm ${barColor(t.games)}`}
                 />
               ))}
             </div>
             <div className="text-xs text-muted mt-1.5">
               {t.games} game{t.games !== 1 ? "s" : ""}
             </div>
-            <div className="text-[10px] text-muted mt-0.5">
-              {t.matchups.map((m) => m.opponent).join(", ")}
+            <div className="flex flex-wrap justify-center gap-x-1 gap-y-0 mt-0.5">
+              {t.matchups.map((m, i) => (
+                <span key={i} className="text-[10px] text-muted">
+                  {m.opponent}{i < t.matchups.length - 1 ? "," : ""}
+                </span>
+              ))}
             </div>
           </div>
         ))}
@@ -136,7 +168,6 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
       }`}
     >
       <div className="flex gap-4 items-start">
-        {/* Rank + projected */}
         <div className="flex flex-col items-center shrink-0 w-12">
           <span className={`text-xs font-medium ${rank <= 3 ? "text-accent" : "text-muted"}`}>
             #{rank}
@@ -147,13 +178,13 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
           <span className="text-[10px] text-muted">fpts</span>
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <h3 className="text-base font-semibold text-gray-100">{s.name}</h3>
             <span className="text-sm text-muted">{s.position}</span>
-            <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono">
-              {s.team}
+            <span className="inline-flex items-center gap-1 text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono">
+              {s.team_id && <TeamLogo teamId={s.team_id} size={14} />}
+              {s.team_name || s.team}
             </span>
             {rank <= 3 && (
               <span className="text-xs bg-accent/15 text-accent rounded-full px-2 py-0.5 font-medium flex items-center gap-0.5">
@@ -162,7 +193,6 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
             )}
           </div>
 
-          {/* Stats row */}
           <div className="flex items-center gap-3 mt-1.5 text-sm text-muted">
             <span className="flex items-center gap-1">
               <Calendar size={12} /> {s.n_games} game{s.n_games !== 1 ? "s" : ""}
@@ -175,7 +205,6 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
             )}
           </div>
 
-          {/* Matchup chips */}
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
@@ -223,12 +252,17 @@ function SkeletonRow() {
 
 
 export default function StreamersPage() {
+  const params = useParams();
+  const sport = params.sport as string;
   const [data, setData] = useState<StreamersPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/streamers?top=30`)
+    setLoading(true);
+    setError(null);
+    setData(null);
+    fetch(`${API_BASE}/api/streamers?top=30&sport=${sport}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(`API error ${res.status}`);
         return res.json();
@@ -236,110 +270,84 @@ export default function StreamersPage() {
       .then((d) => setData(d as StreamersPayload))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [sport]);
 
   return (
-    <div className="min-h-screen bg-bg">
-      {/* Header */}
-      <header className="border-b border-line bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center">
-              <Zap size={16} className="text-bg" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
-          >
-            Your roster <ArrowRight size={14} />
-          </Link>
-        </div>
-      </header>
+    <main className="max-w-4xl mx-auto px-4 py-8">
+      <Link
+        href={`/${sport}`}
+        className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors mb-4"
+      >
+        <ArrowLeft size={12} /> Back to {sport.toUpperCase()} Dashboard
+      </Link>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Title */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-2">
-            <Flame size={22} className="text-accent" />
-            Top Streamers This Week
-          </h1>
-          <p className="text-sm text-muted leading-relaxed max-w-2xl">
-            The best fantasy streaming pickups ranked by projected value.
-            Schedule density × matchups × recent form — real sports data, updated weekly.
-          </p>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-2">
+          <Flame size={22} className="text-accent" />
+          Top Streamers This Week
+        </h1>
+        <p className="text-sm text-muted leading-relaxed max-w-2xl">
+          The best fantasy streaming pickups ranked by projected value.
+          Schedule density × matchups × recent form — real sports data, updated weekly.
+        </p>
+      </div>
 
-        {/* Error */}
-        {error && (
-          <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6">
-            <p className="text-sm text-neg">{error}</p>
+      {error && (
+        <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6">
+          <p className="text-sm text-neg">{error}</p>
+        </div>
+      )}
+
+      {loading && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-10">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="rounded-lg border border-line bg-card p-3 animate-pulse">
+                <div className="h-4 w-10 mx-auto rounded bg-line" />
+                <div className="h-2 w-16 mx-auto rounded bg-line mt-2" />
+              </div>
+            ))}
           </div>
-        )}
+          {[1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}
+        </div>
+      )}
 
-        {/* Loading */}
-        {loading && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-10">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="rounded-lg border border-line bg-card p-3 animate-pulse">
-                  <div className="h-4 w-10 mx-auto rounded bg-line" />
-                  <div className="h-2 w-16 mx-auto rounded bg-line mt-2" />
-                </div>
+      {data && !loading && (
+        <>
+          <ScheduleGrid grid={data.schedule_grid} week={data.week} />
+
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold flex items-center gap-2">
+                <TrendingUp size={16} className="text-pos" /> Top Streaming Pickups
+              </h2>
+              <span className="text-xs text-muted">
+                {data.streamers.length} players · by projected fpts
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {data.streamers.map((s, i) => (
+                <StreamerRow key={s.player_id} s={s} rank={i + 1} />
               ))}
             </div>
-            {[1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}
+          </section>
+
+          <div className="mt-12 rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
+            <h3 className="text-lg font-bold mb-2">Want picks for YOUR roster?</h3>
+            <p className="text-sm text-muted mb-4 max-w-md mx-auto">
+              The streamers above are generic. Paste your roster and the engine ranks who to
+              add and who to drop — personalized value-over-replacement.
+            </p>
+            <Link
+              href={`/${sport}`}
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
+            >
+              <Zap size={16} /> Rank adds for my team <ArrowRight size={14} />
+            </Link>
           </div>
-        )}
-
-        {/* Content */}
-        {data && !loading && (
-          <>
-            <ScheduleGrid grid={data.schedule_grid} week={data.week} />
-
-            {/* Streamers list */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-semibold flex items-center gap-2">
-                  <TrendingUp size={16} className="text-pos" /> Top Streaming Pickups
-                </h2>
-                <span className="text-xs text-muted">
-                  {data.streamers.length} players · by projected fpts
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {data.streamers.map((s, i) => (
-                  <StreamerRow key={s.player_id} s={s} rank={i + 1} />
-                ))}
-              </div>
-            </section>
-
-            {/* CTA */}
-            <div className="mt-12 rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
-              <h3 className="text-lg font-bold mb-2">Want picks for YOUR roster?</h3>
-              <p className="text-sm text-muted mb-4 max-w-md mx-auto">
-                The streamers above are generic. Paste your roster and the engine ranks who to
-                add and who to drop — personalized value-over-replacement.
-              </p>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
-              >
-                <Zap size={16} /> Rank adds for my team <ArrowRight size={14} />
-              </Link>
-            </div>
-          </>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-line mt-16 py-6">
-        <p className="text-center text-xs text-muted">
-          WaiverEdge · Real sports data · No logos or trademarks used
-        </p>
-      </footer>
-    </div>
+        </>
+      )}
+    </main>
   );
 }

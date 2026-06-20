@@ -114,6 +114,7 @@ function RecCard({ rec, rank, mode, sport }: { rec: Recommendation; rank: number
 export default function LeaguePage() {
   const params = useParams();
   const connectionId = params.id as string;
+  const sport = params.sport as string;
   const [league, setLeague] = useState<LeagueInfo | null>(null);
   const [recs, setRecs] = useState<RecsPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -158,98 +159,79 @@ export default function LeaguePage() {
   }
 
   const mode = recs?.scoring_mode ?? "points";
+  const leagueSport = league?.sport ?? sport;
 
   return (
-    <div className="min-h-screen bg-bg">
-      <header className="border-b border-line bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center"><Zap size={16} className="text-bg" /></div>
-            <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
+    <main className="max-w-3xl mx-auto px-4 py-8">
+      {loading && <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-accent" /><span className="ml-2 text-muted">Loading…</span></div>}
+      {error === "__paywall__" && (
+        <div className="rounded-xl border-2 border-accent bg-accent/5 p-6 text-center mb-6">
+          <Crown size={28} className="text-accent mx-auto mb-2" />
+          <h3 className="text-lg font-bold mb-1">Upgrade to Pro</h3>
+          <p className="text-sm text-muted mb-4">Personalized league recommendations require WaiverEdge Pro.</p>
+          <Link href="/pricing" className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg hover:opacity-90">
+            <Crown size={14} /> View pricing
           </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/streamers" className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors"><Flame size={14} /> Streamers</Link>
-            <Link href={`/alerts/${connectionId}`} className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">🔔 Alerts</Link>
-            {mode === "categories" && <span className="flex items-center gap-1 text-xs text-accent bg-surface rounded-md px-2 py-1"><ArrowUpDown size={12} /> {getCatLabel(league?.sport ?? "nba")}</span>}
-          </div>
         </div>
-      </header>
+      )}
+      {error && error !== "__paywall__" && <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6"><p className="text-sm text-neg">{error}</p></div>}
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        {loading && <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-accent" /><span className="ml-2 text-muted">Loading…</span></div>}
-        {error === "__paywall__" && (
-          <div className="rounded-xl border-2 border-accent bg-accent/5 p-6 text-center mb-6">
-            <Crown size={28} className="text-accent mx-auto mb-2" />
-            <h3 className="text-lg font-bold mb-1">Upgrade to Pro</h3>
-            <p className="text-sm text-muted mb-4">Personalized league recommendations require WaiverEdge Pro.</p>
-            <Link href="/pricing" className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg hover:opacity-90">
-              <Crown size={14} /> View pricing
-            </Link>
+      {league && !loading && (
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Your League</h1>
+              <p className="text-xs text-muted mt-0.5">{league.platform.toUpperCase()} · {league.league_id}{league.roster.length > 0 && ` · ${league.roster.length} players`}</p>
+            </div>
+            <button onClick={syncRoster} disabled={syncing} className="flex items-center gap-1.5 rounded-lg bg-surface border border-line px-3 py-1.5 text-sm text-muted hover:text-accent hover:border-accent/40 transition-colors disabled:opacity-40">
+              <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : "Sync roster"}
+            </button>
           </div>
-        )}
-        {error && error !== "__paywall__" && <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6"><p className="text-sm text-neg">{error}</p></div>}
 
-        {league && !loading && (
-          <>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">Your League</h1>
-                <p className="text-xs text-muted mt-0.5">{league.platform.toUpperCase()} · {league.league_id}{league.roster.length > 0 && ` · ${league.roster.length} players`}</p>
-              </div>
-              <button onClick={syncRoster} disabled={syncing} className="flex items-center gap-1.5 rounded-lg bg-surface border border-line px-3 py-1.5 text-sm text-muted hover:text-accent hover:border-accent/40 transition-colors disabled:opacity-40">
-                <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : "Sync roster"}
+          {league.roster.length === 0 && (
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center mb-8">
+              <p className="text-sm text-muted mb-3">No roster synced yet.</p>
+              <button onClick={syncRoster} disabled={syncing} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90 disabled:opacity-40">
+                <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> Sync from Yahoo
               </button>
             </div>
+          )}
 
-            {league.roster.length === 0 && (
-              <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center mb-8">
-                <p className="text-sm text-muted mb-3">No roster synced yet.</p>
-                <button onClick={syncRoster} disabled={syncing} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90 disabled:opacity-40">
-                  <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> Sync from Yahoo
-                </button>
-              </div>
-            )}
-
-            {league.roster.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-base font-semibold mb-3">Your Roster</h2>
-                <div className="rounded-xl border border-line bg-card overflow-hidden">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-line">
-                    {league.roster.map((p) => (
-                      <div key={p.player_id} className="bg-card px-3 py-2 flex items-center gap-2">
-                        <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono shrink-0">
-                          {p.slot || "UTIL"}
-                        </span>
-                        <span className="text-sm truncate">{p.name}</span>
-                      </div>
-                    ))}
-                  </div>
+          {league.roster.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-base font-semibold mb-3">Your Roster</h2>
+              <div className="rounded-xl border border-line bg-card overflow-hidden">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-line">
+                  {league.roster.map((p) => (
+                    <div key={p.player_id} className="bg-card px-3 py-2 flex items-center gap-2">
+                      <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono shrink-0">
+                        {p.slot || "UTIL"}
+                      </span>
+                      <span className="text-sm truncate">{p.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {recs && recs.recommendations.length > 0 && (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-base font-semibold">Waiver Action List</h2>
-                    <p className="text-xs text-muted mt-0.5">Week of {recs.week.start} to {recs.week.end}{recs.scoring_mode === "categories" && <> · <span className="text-accent">{getCatLabel(league?.sport ?? "nba")}</span></>}</p>
-                  </div>
-                  <span className="text-xs text-muted">{recs.recommendations.length} add{recs.recommendations.length !== 1 ? "s" : ""}</span>
+          {recs && recs.recommendations.length > 0 && (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-base font-semibold">Waiver Action List</h2>
+                  <p className="text-xs text-muted mt-0.5">Week of {recs.week.start} to {recs.week.end}{recs.scoring_mode === "categories" && <> · <span className="text-accent">{getCatLabel(leagueSport)}</span></>}</p>
                 </div>
-                <div className="space-y-3">{recs.recommendations.map((r, i) => <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={league?.sport ?? "nba"} />)}</div>
-              </>
-            )}
-            {recs && recs.recommendations.length === 0 && league.roster.length > 0 && (
-              <p className="text-sm text-muted text-center py-12">No free agents outrank your roster this week.</p>
-            )}
-          </>
-        )}
-      </main>
-
-      <footer className="border-t border-line mt-16 py-6">
-        <p className="text-center text-xs text-muted">WaiverEdge · Real sports data · No logos or trademarks used</p>
-      </footer>
-    </div>
+                <span className="text-xs text-muted">{recs.recommendations.length} add{recs.recommendations.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="space-y-3">{recs.recommendations.map((r, i) => <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={leagueSport} />)}</div>
+            </>
+          )}
+          {recs && recs.recommendations.length === 0 && league.roster.length > 0 && (
+            <p className="text-sm text-muted text-center py-12">No free agents outrank your roster this week.</p>
+          )}
+        </>
+      )}
+    </main>
   );
 }
