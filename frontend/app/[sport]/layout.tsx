@@ -40,7 +40,7 @@ export default function SportLayout({ children }: { children: ReactNode }) {
               </div>
               <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
             </Link>
-            <span className="text-xs bg-surface text-muted rounded-md px-2 py-1 font-medium">
+            <span className="text-xs bg-accent/10 text-accent border border-accent/30 rounded-md px-2 py-1 font-semibold">
               {meta.icon} {meta.name}
             </span>
           </div>

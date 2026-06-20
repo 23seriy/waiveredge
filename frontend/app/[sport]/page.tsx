@@ -7,9 +7,11 @@ import {
   ArrowUpDown,
   Calendar,
   ChevronDown,
+  Flame,
   Loader2,
   RotateCcw,
   Search,
+  Shield,
   TrendingUp,
   Zap,
 } from "lucide-react";
@@ -388,7 +390,17 @@ export default function SportDashboard() {
           >
             Connect your league <ArrowRight size={16} />
           </Link>
+          <Link
+            href={`/${sport}/streamers`}
+            className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
+          >
+            <Flame size={14} /> Free weekly streamers
+          </Link>
         </div>
+
+        <p className="text-xs text-muted">
+          Works with Yahoo &amp; ESPN &middot; {getCatLabel(sport)} &amp; Points leagues
+        </p>
       </section>
 
       {/* Mode control */}
@@ -504,6 +516,32 @@ export default function SportDashboard() {
             )}
           </>
         )}
+      </section>
+
+      {/* Value props */}
+      <section className="max-w-3xl mx-auto mt-8 mb-4">
+        <div className="rounded-lg bg-surface/50 border border-line p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+            <div>
+              <p className="text-sm font-medium flex items-center gap-1.5 mb-1">
+                <Calendar size={14} className="text-accent" /> Schedule density
+              </p>
+              <p className="text-xs text-muted">More games = more streaming value. We rank who plays most.</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium flex items-center gap-1.5 mb-1">
+                <TrendingUp size={14} className="text-pos" /> Matchup quality
+              </p>
+              <p className="text-xs text-muted">Soft opponents boost projections. We factor opponent strength.</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium flex items-center gap-1.5 mb-1">
+                <Shield size={14} className="text-accent" /> Read-only access
+              </p>
+              <p className="text-xs text-muted">We never modify your team. Connect with confidence.</p>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   );
