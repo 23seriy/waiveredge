@@ -104,4 +104,4 @@ def yahoo_callback(code: str = Query(...), state: str = Query(""), db: Session =
     connection_id = conn.id
     db.commit()
 
-    return RedirectResponse(f"{FRONTEND_BASE}/league/{connection_id}")
+    return RedirectResponse(f"{FRONTEND_BASE}/{game_key}/league/{connection_id}")

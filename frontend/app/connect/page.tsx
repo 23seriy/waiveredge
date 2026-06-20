@@ -107,7 +107,7 @@ function ESPNConnectForm() {
       });
       if (!res.ok) { const b = await res.json().catch(() => null); setResult(b?.detail || `Failed (${res.status})`); return; }
       const data = await res.json();
-      window.location.href = `/league/${data.connection_id}`;
+      window.location.href = `/${espnSport}/league/${data.connection_id}`;
     } catch { setResult("Could not reach the API."); }
     finally { setLoading(false); }
   }
