@@ -95,7 +95,7 @@ function SportToggle({ sport, onChange }: { sport: Sport; onChange: (s: Sport) =
 }
 
 
-function ModeToggle({ mode, onChange }: { mode: ScoringMode; onChange: (m: ScoringMode) => void }) {
+function ModeToggle({ mode, onChange, sport }: { mode: ScoringMode; onChange: (m: ScoringMode) => void; sport: Sport }) {
   return (
     <div className="flex rounded-lg bg-surface p-1 gap-1">
       <button
@@ -118,7 +118,7 @@ function ModeToggle({ mode, onChange }: { mode: ScoringMode; onChange: (m: Scori
             : "text-muted hover:text-gray-200"
         }`}
       >
-        <ArrowUpDown size={14} /> 9-Cat
+        <ArrowUpDown size={14} /> {getCatLabel(sport)}
       </button>
     </div>
   );
@@ -461,7 +461,7 @@ export default function Home() {
         {/* Sport + Mode controls */}
         <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
           <SportToggle sport={sport} onChange={handleSportChange} />
-          <ModeToggle mode={mode} onChange={handleModeChange} />
+          <ModeToggle mode={mode} onChange={handleModeChange} sport={sport} />
         </div>
 
         {/* Fixture status check */}
