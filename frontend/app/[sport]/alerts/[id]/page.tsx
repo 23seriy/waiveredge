@@ -26,7 +26,7 @@ type Alert = {
   created_at: string | null;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
 
 export default function AlertsPage() {
   const params = useParams();
