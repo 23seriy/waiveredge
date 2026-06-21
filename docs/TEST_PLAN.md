@@ -12,7 +12,7 @@ uvicorn app.main:app --reload          # http://localhost:8000
 # Frontend
 cd frontend && npm run dev             # http://localhost:3000
 
-# Unit tests (46 currently)
+# Unit tests (90 currently)
 python -m pytest tests/ -v
 ```
 
@@ -87,58 +87,69 @@ python -m pytest tests/ -v
 ### 2.1 Home Page (`/`)
 | # | Test | How | Expected | Status |
 |---|------|-----|----------|--------|
-| 29 | Page loads | Navigate to `/` | Header with WaiverEdge logo, mode toggle, Streamers/Connect/Pro links | |
-| 30 | Sample roster pre-filled | Check textarea | 10 NBA player names | |
-| 31 | Mode toggle | Click Points ↔ 9-Cat | Toggle highlights, hero text updates | |
-| 32 | Submit points mode | Click "Rank waiver adds" in Points | Loading spinner → recommendation cards appear | |
-| 33 | Submit 9-cat mode | Switch to 9-Cat, submit | Cards show z-score badges (green/red/gray), `helps weak cats` chips | |
-| 34 | Expand rationale | Click "Details" on a card | Full rationale text expands | |
-| 35 | Unresolved warning | Add a fake name to roster, submit | Orange warning bar listing the unresolved name | |
-| 36 | Error state | Stop backend, submit | Red error box with connection message | |
-| 37 | Persist roster | Type custom roster, reload page | Restored from localStorage | |
-| 38 | Persist mode | Switch to 9-Cat, reload | Mode restored | |
+| 29 | Page loads | Navigate to `/` | Sport picker cards (MLB live, NBA offseason), Pricing nav | |
+| 30 | Sport nav | Click MLB card | Navigates to `/mlb` | |
+| 31 | Footer links | Check footer | Pricing + MLB Streamers links present | |
 
-### 2.2 Streamers Page (`/streamers`)
+### 2.2 Sport Dashboard (`/[sport]`)
 | # | Test | How | Expected | Status |
 |---|------|-----|----------|--------|
-| 39 | Page loads | Navigate to `/streamers` | Title, schedule grid, top streamers list | |
-| 40 | Schedule grid | Check team cards | Teams with most games highlighted in accent, game-count bars visible | |
-| 41 | Show all teams | Click "Show all 30 teams" | Expands to all teams | |
-| 42 | Streamer cards | Check top 3 | "top pick" flame badge, rank #, projected fpts | |
-| 43 | Matchup expand | Click "Matchups" on a card | Opponent chips with soft/tough badges | |
-| 44 | CTA banner | Scroll to bottom | "Want picks for YOUR roster?" with link to `/` | |
-| 45 | Header nav | Click WaiverEdge logo | Navigates to `/` | |
+| 32 | Page loads | Navigate to `/mlb` | Header with sport badge, mode toggle, roster textarea | |
+| 33 | Sample roster pre-filled | Check textarea | 10 MLB player names | |
+| 34 | Mode toggle | Click Points ↔ 5x5 | Toggle highlights | |
+| 35 | Submit points mode | Click "Rank waiver adds" in Points | Loading spinner → recommendation cards appear | |
+| 36 | Submit 5x5 mode | Switch to 5x5, submit | Cards show z-score badges (green/red/gray), `helps weak cats` chips | |
+| 37 | Expand rationale | Click "Details" on a card | Full rationale text expands | |
+| 38 | Unresolved warning | Add a fake name to roster, submit | Orange warning bar listing the unresolved name | |
+| 39 | Error state | Stop backend, submit | Red error box with connection message | |
+| 40 | Persist roster | Type custom roster, reload page | Restored from localStorage | |
+| 41 | Persist mode | Switch to 5x5, reload | Mode restored | |
 
-### 2.3 Connect Page (`/connect`)
+### 2.3 Streamers Page (`/[sport]/streamers`)
 | # | Test | How | Expected | Status |
 |---|------|-----|----------|--------|
-| 46 | Page loads | Navigate to `/connect` | Yahoo connect card with feature grid | |
-| 47 | Connect button | Click "Connect with Yahoo" | Redirects to Yahoo OAuth (or API error if not configured) | |
-| 48 | Error param | Navigate to `/connect?error=no_leagues` | Error banner shown | |
-| 49 | Manual fallback | Click "Paste your roster manually" | Navigates to `/` | |
+| 42 | Page loads | Navigate to `/mlb/streamers` | Title, schedule grid, top streamers list | |
+| 43 | Schedule grid | Check team cards | Teams with most games highlighted in accent, game-count bars visible | |
+| 44 | Show all teams | Click "Show all teams" | Expands to all teams | |
+| 45 | Streamer cards | Check top 3 | "top pick" flame badge, rank #, projected fpts | |
+| 46 | Matchup expand | Click "Matchups" on a card | Opponent chips with soft/tough badges | |
+| 47 | CTA banner | Scroll to bottom | "Want picks for YOUR roster?" with link back to sport dashboard | |
+| 48 | Header nav | Click WaiverEdge logo | Navigates to `/` | |
 
-### 2.4 Pricing Page (`/pricing`)
+### 2.4 Connect Page (`/[sport]/connect`)
 | # | Test | How | Expected | Status |
 |---|------|-----|----------|--------|
-| 50 | Page loads | Navigate to `/pricing` | Free vs Pro cards, plan toggle | |
-| 51 | Plan toggle | Click Monthly ↔ Season Pass | Price updates ($8/mo vs $39/season), savings text changes | |
-| 52 | Pro features | Check Pro card | 6 features listed with green checks | |
-| 53 | Checkout button | Click "Upgrade to Pro" | Calls billing API (503 if Stripe not configured — expected for dev) | |
+| 49 | Page loads | Navigate to `/mlb/connect` | Yahoo + ESPN connect cards with feature grid | |
+| 50 | Yahoo button | Click "Connect with Yahoo" | Redirects to Yahoo OAuth (or API error if not configured) | |
+| 51 | ESPN flow | Enter league ID, fetch teams, select, connect | Redirects to `/mlb/league/{id}` | |
+| 52 | Error param | Navigate to `/mlb/connect?error=no_leagues` | Error banner shown | |
+| 53 | Manual fallback | Click "Paste your roster manually" | Navigates to `/mlb` | |
 
-### 2.5 League Page (`/league/[id]`) — requires active Yahoo connection
+### 2.5 Pricing Page (`/pricing`)
 | # | Test | How | Expected | Status |
 |---|------|-----|----------|--------|
-| 54 | Page loads | Navigate to `/league/1` | League info header, sync button | |
-| 55 | Sync roster | Click "Sync roster" | Spinner → roster populated | |
-| 56 | Recommendations | After sync | Personalized rec cards appear | |
-| 57 | 9-cat detection | If Yahoo league is H2H-cats | 9-Cat badge in header, z-score cards | |
+| 54 | Page loads | Navigate to `/pricing` | Free vs Pro cards, plan toggle, ← Back link | |
+| 55 | Plan toggle | Click Monthly ↔ Season Pass | Price updates ($8/mo vs $39/season), savings text changes | |
+| 56 | Pro features | Check Pro card | 6 features listed with green checks | |
+| 57 | Checkout button | Click "Upgrade to Pro" | Calls billing API (503 if Stripe not configured — expected for dev) | |
+| 58 | SEO metadata | View page source | `<title>Pricing — WaiverEdge Pro</title>` present | |
 
-### 2.6 Responsive / Cross-cutting
+### 2.6 League Page (`/[sport]/league/[id]`) — requires active connection
 | # | Test | How | Expected | Status |
 |---|------|-----|----------|--------|
-| 58 | Mobile layout | Resize to 375px width | Cards stack, text readable, no overflow | |
-| 59 | Nav links | Click all header links | Each navigates correctly | |
-| 60 | Dark mode consistent | Visual scan all pages | bg-bg dark background, no white flashes | |
+| 59 | Page loads | Navigate to `/mlb/league/1` | League info header, sync button | |
+| 60 | Sync roster | Click "Sync roster" | Spinner → roster populated | |
+| 61 | Unresolved shown | After sync with missing players | Orange banner listing unmatched names | |
+| 62 | Recommendations | After sync | Personalized rec cards appear | |
+| 63 | Scoring detection | If Yahoo league is H2H-cats/roto | Category badge in header, z-score cards | |
+
+### 2.7 Responsive / Cross-cutting
+| # | Test | How | Expected | Status |
+|---|------|-----|----------|--------|
+| 64 | Mobile layout | Resize to 375px width | Cards stack, text readable, no overflow | |
+| 65 | Nav links | Click all header links | Each navigates correctly, sport-scoped | |
+| 66 | Dark mode consistent | Visual scan all pages | bg-bg dark background, no white flashes | |
+| 67 | Invalid sport | Navigate to `/fake` | "Sport not found" with back link | |
 
 ---
 
@@ -150,12 +161,15 @@ cd backend && python -m pytest tests/ -v
 
 | Suite | Count | Covers |
 |---|---|---|
-| `test_api.py` | 14 | All HTTP endpoints via TestClient |
+| `test_api.py` | 17 | All HTTP endpoints + league error shapes |
 | `test_categories.py` | 5 | 9-cat z-score engine |
+| `test_matchups.py` | 9 | DvP table, clamping, shrinkage, positions |
+| `test_name_resolution.py` | 13 | Accent folding, punctuation, deduplication |
+| `test_projections.py` | 11 | Recency weighting, edge cases, MLB weights |
 | `test_recommendations.py` | 7 | Service layer (build_recs, top_streamers) |
-| `test_scoring.py` | 10 | Core engine, DvP, name resolution |
-| `test_scoring_systems.py` | 10 | LeagueScoring, config, fantasy_points |
-| **Total** | **46** | |
+| `test_scoring.py` | 10 | Core engine integration |
+| `test_scoring_systems.py` | 12 | LeagueScoring, sport config, fantasy_points |
+| **Total** | **90** | |
 
 ---
 
@@ -164,3 +178,4 @@ cd backend && python -m pytest tests/ -v
 | Date | Change |
 |---|---|
 | 2026-06-17 | Initial plan — 60 manual checks + 46 automated tests |
+| 2026-06-21 | Updated for sport-scoped routes, 87 automated tests, unresolved player display |

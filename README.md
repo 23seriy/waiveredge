@@ -118,11 +118,12 @@ backend/                  FastAPI + Postgres
     models.py / db.py     ← SQLAlchemy 2.0
     main.py               ← API (sport-aware endpoints)
   migrations/
-  sample_data/            ← materialized REAL fixtures (gitignored)
+  sample_data_nba/        ← materialized REAL NBA fixtures (gitignored)
+  sample_data_mlb/        ← materialized REAL MLB fixtures (gitignored)
   scripts/
-  tests/                  ← 46 unit tests
-frontend/                 Next.js 14 + Tailwind CSS
-  app/                    ← /, /streamers, /connect, /league/[id], /pricing
+  tests/                  ← 90 unit tests
+frontend/                 Next.js 15 + Tailwind CSS
+  app/                    ← /, /[sport]/, /[sport]/streamers, /[sport]/connect, /[sport]/league/[id], /pricing
 docker-compose.yml        Postgres for local dev
 ```
 
@@ -176,7 +177,7 @@ unlocks the dormant role-bump / availability signals) and a documented SLA.
 - [x] LLM-powered AI rationales (OpenAI gpt-4o-mini)
 - [x] Fixture caching + background builds (24h cache, progress polling)
 - [x] Home page UX redesign (hero, clean header, sport-aware)
-- [x] 46 unit tests (API + engine + service + scoring systems)
+- [x] 90 unit tests (API + engine + projections + matchups + name resolution + scoring systems)
 - [x] Deploy configs (Dockerfile, Railway, Fly.io, Vercel)
 - [ ] Deploy MVP to production
 - [ ] Nightly DvP recompute job + `team_dvp` cache

@@ -25,7 +25,7 @@ from ..config import settings
 from ..models import Game, Injury, Player, PlayerGameLog, Team
 from .balldontlie import BalldontlieClient
 
-SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample_data"
+SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample_data_nba"
 
 
 def _primary_position(pos: str | None) -> str:
