@@ -17,7 +17,7 @@ from .scoring.categories import rank_category_adds
 from .scoring.engine import games_in_window, project_value, rank_waiver_adds
 from .scoring.matchups import compute_dvp
 from .scoring.projections import project_all
-from .scoring.scoring_systems import DEFAULT_POINTS_SCORING, league_from_config
+from .scoring.scoring_systems import DEFAULT_POINTS_SCORING, league_from_config, league_from_sport_config
 from .sports import get_sport
 from .scoring.types import GameLog, Injury, Player, Projection, ScheduledGame
 
@@ -139,15 +139,17 @@ def load_fixtures(sport: str = "nba") -> dict:
             for name in FIXTURE_FILES}
 
 
-def build_recommendations(fx: dict) -> list[dict]:
+def build_recommendations(fx: dict, sport: str = "nba") -> list[dict]:
     cfg = fx["roster"]
-    league = league_from_config({"mode": cfg.get("mode", "points"),
-                                 "weights": cfg.get("scoring"),
-                                 "categories": cfg.get("categories")})
+    sport_cfg = get_sport(sport)
+    league = league_from_sport_config({"mode": cfg.get("mode", "points"),
+                                       "weights": cfg.get("scoring"),
+                                       "categories": cfg.get("categories")}, sport_cfg)
     window = (cfg["week_start"], cfg["week_end"])
     # Points weights drive fppg + the DvP matchup buckets; per-game projections
     # (used by category mode) are computed regardless of the weights.
-    weights = league.weights if league.mode == "points" else DEFAULT_POINTS_SCORING
+    default_weights = dict(sport_cfg.default_points_scoring)
+    weights = league.weights if league.mode == "points" else default_weights
 
     players = {p["id"]: Player(p["id"], p["name"], p["team_id"], p["positions"])
                for p in fx["players"]}
@@ -264,7 +266,7 @@ def manual_recommendations(
     return {
         "week": {"start": league["week_start"], "end": league["week_end"]},
         "scoring_mode": scoring_mode,
-        "recommendations": build_recommendations(fx) if roster_entries else [],
+        "recommendations": build_recommendations(fx, sport) if roster_entries else [],
         "unresolved": unresolved,
         "resolved_count": len(roster_entries),
     }
@@ -277,7 +279,7 @@ def sample_recommendations(scoring_mode: str = "points", sport: str = "nba") -> 
     return {
         "week": {"start": fx["roster"]["week_start"], "end": fx["roster"]["week_end"]},
         "scoring_mode": scoring_mode,
-        "recommendations": build_recommendations(fx),
+        "recommendations": build_recommendations(fx, sport),
     }
 
 
