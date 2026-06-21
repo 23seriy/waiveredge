@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # Current NBA season (start year) used for ingestion queries.
     season: int = 2025
 
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,https://localhost:3000"
 
     # Yahoo OAuth 2.0 (register at https://developer.yahoo.com/apps/)
     yahoo_client_id: str = ""
