@@ -157,6 +157,10 @@ export default function LeaguePage() {
     setUnresolved([]);
     try {
       const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/sync`, { method: "POST" });
+      if (res.status === 402) {
+        setError("__paywall__");
+        return;
+      }
       if (!res.ok) {
         const b = await res.json().catch(() => null);
         const detail = b?.detail;
