@@ -1,55 +1,86 @@
-"""Tests for scoring_systems.py — LeagueScoring, league_from_config, constants."""
+"""Tests for scoring_systems.py — LeagueScoring, league_from_sport_config, constants."""
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.scoring.scoring_systems import (  # noqa: E402
     CATEGORY_META,
-    DEFAULT_POINTS_SCORING,
+    NBA_DEFAULT_POINTS_SCORING,
     NINE_CAT,
     RAW_STATS,
     LeagueScoring,
     fantasy_points,
-    league_from_config,
+    league_from_sport_config,
 )
 
 
-def test_default_league_scoring_is_points():
+# Minimal SportConfig stub for tests — mirrors app.sports.SportConfig structure.
+@dataclass
+class _FakeSportConfig:
+    default_points_scoring: dict = field(default_factory=lambda: dict(NBA_DEFAULT_POINTS_SCORING))
+    default_categories: tuple = NINE_CAT
+    category_meta: dict = field(default_factory=lambda: dict(CATEGORY_META))
+
+
+_NBA_CFG = _FakeSportConfig()
+_MLB_CFG = _FakeSportConfig(
+    default_points_scoring={"h": 1.0, "hr": 4.0, "rbi": 1.0},
+    default_categories=("r", "hr", "rbi", "sb", "avg"),
+    category_meta={"r": {"stat": "r"}, "hr": {"stat": "hr"}, "rbi": {"stat": "rbi"},
+                   "sb": {"stat": "sb"}, "avg": {"percentage": True, "made": "h", "att": "ab"}},
+)
+
+
+def test_default_league_scoring_has_empty_weights():
     ls = LeagueScoring()
     assert ls.mode == "points"
-    assert ls.weights == DEFAULT_POINTS_SCORING
+    assert ls.weights == {}  # No silent NBA fallback
 
 
-def test_league_from_config_none_returns_default():
-    ls = league_from_config(None)
+def test_league_from_sport_config_none_uses_sport_defaults():
+    ls = league_from_sport_config(None, _NBA_CFG)
     assert ls.mode == "points"
+    assert ls.weights == NBA_DEFAULT_POINTS_SCORING
 
 
-def test_league_from_config_points_explicit():
-    ls = league_from_config({"mode": "points", "weights": {"pts": 2.0}})
+def test_league_from_sport_config_mlb_none_uses_mlb_defaults():
+    ls = league_from_sport_config(None, _MLB_CFG)
+    assert ls.mode == "points"
+    assert "hr" in ls.weights
+    assert "pts" not in ls.weights  # No NBA leakage
+
+
+def test_league_from_sport_config_points_explicit():
+    ls = league_from_sport_config({"mode": "points", "weights": {"pts": 2.0}}, _NBA_CFG)
     assert ls.mode == "points"
     assert ls.weights["pts"] == 2.0
 
 
-def test_league_from_config_categories():
-    ls = league_from_config({"mode": "categories", "categories": ["pts", "reb", "ast"]})
+def test_league_from_sport_config_categories():
+    ls = league_from_sport_config({"mode": "categories", "categories": ["pts", "reb", "ast"]}, _NBA_CFG)
     assert ls.mode == "categories"
     assert ls.categories == ["pts", "reb", "ast"]
 
 
-def test_league_from_config_categories_filters_invalid():
-    ls = league_from_config({"mode": "categories", "categories": ["pts", "NOT_REAL", "blk"]})
+def test_league_from_sport_config_categories_filters_invalid():
+    ls = league_from_sport_config({"mode": "categories", "categories": ["pts", "NOT_REAL", "blk"]}, _NBA_CFG)
     assert "pts" in ls.categories
     assert "blk" in ls.categories
     assert "NOT_REAL" not in ls.categories
 
 
-def test_league_from_config_categories_default_when_empty():
-    ls = league_from_config({"mode": "categories", "categories": []})
+def test_league_from_sport_config_categories_default_when_empty():
+    ls = league_from_sport_config({"mode": "categories", "categories": []}, _NBA_CFG)
     assert ls.categories == list(NINE_CAT)
+
+
+def test_league_from_sport_config_mlb_categories_default():
+    ls = league_from_sport_config({"mode": "categories", "categories": []}, _MLB_CFG)
+    assert ls.categories == list(_MLB_CFG.default_categories)
 
 
 def test_nine_cat_matches_category_meta():

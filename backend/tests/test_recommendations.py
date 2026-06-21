@@ -58,7 +58,7 @@ def test_build_recommendations_points_mode():
     fx["roster"]["roster"] = [{"player_id": 2, "slot": "PG"}, {"player_id": 3, "slot": "PG"}]
     fx["roster"]["free_agents"] = [1]
     fx["roster"]["droppable"] = [2, 3]
-    recs = build_recommendations(fx)
+    recs = build_recommendations(fx, sport="nba")
     assert len(recs) == 1
     assert recs[0]["add_name"] == "Test Star"
     assert recs[0]["total_z"] is None  # points mode
@@ -71,7 +71,7 @@ def test_build_recommendations_categories_mode():
     fx["roster"]["roster"] = [{"player_id": 2, "slot": "PG"}, {"player_id": 3, "slot": "PG"}]
     fx["roster"]["free_agents"] = [1]
     fx["roster"]["droppable"] = [2, 3]
-    recs = build_recommendations(fx)
+    recs = build_recommendations(fx, sport="nba")
     assert len(recs) == 1
     assert recs[0]["total_z"] is not None
     assert isinstance(recs[0]["per_cat_z"], dict)
@@ -87,6 +87,7 @@ def test_manual_recommendations_categories_mode():
         fixtures=_fixtures(),
         scoring_mode="categories",
         categories=["pts", "ast", "stl"],
+        sport="nba",
     )
     assert result["scoring_mode"] == "categories"
     assert result["resolved_count"] == 2
@@ -100,6 +101,7 @@ def test_manual_recommendations_default_mode_is_points():
     result = manual_recommendations(
         roster_names=["Test Weak"],
         fixtures=_fixtures(),
+        sport="nba",
     )
     assert result["scoring_mode"] == "points"
 

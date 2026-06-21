@@ -19,7 +19,7 @@ from app.scoring.scoring_systems import RAW_STATS  # noqa: E402
 from app.scoring.types import Player, Projection, ScheduledGame  # noqa: E402
 
 WINDOW = ("2026-01-01", "2026-01-07")
-NEUTRAL_DVP = compute_dvp([])  # all multipliers 1.0, nothing soft
+NEUTRAL_DVP = compute_dvp([], weights={})  # all multipliers 1.0, nothing soft
 
 
 def _proj(pid: int, **per_game) -> Projection:

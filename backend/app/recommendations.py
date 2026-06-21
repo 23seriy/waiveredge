@@ -17,7 +17,7 @@ from .scoring.categories import rank_category_adds
 from .scoring.engine import games_in_window, project_value, rank_waiver_adds
 from .scoring.matchups import compute_dvp
 from .scoring.projections import project_all
-from .scoring.scoring_systems import DEFAULT_POINTS_SCORING, league_from_config, league_from_sport_config
+from .scoring.scoring_systems import league_from_sport_config
 from .sports import get_sport
 from .scoring.types import GameLog, Injury, Player, Projection, ScheduledGame
 
