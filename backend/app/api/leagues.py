@@ -263,5 +263,5 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
         "league_id": conn.league_id,
         "week": {"start": cfg["week_start"], "end": cfg["week_end"]},
         "scoring_mode": mode,
-        "recommendations": build_recommendations(fx),
+        "recommendations": build_recommendations(fx, sport),
     }
