@@ -8,7 +8,7 @@ pydantic-settings==2.7.1
 SQLAlchemy==2.0.36
 psycopg2-binary==2.9.10
 httpx==0.28.1
-python-dotenv==1.1.0
+python-dotenv==1.2.2
 stripe>=11.0.0
 
 # Real NBA data straight from stats.nba.com (the source balldontlie wraps). The app
@@ -16,4 +16,4 @@ stripe>=11.0.0
 nba_api==1.11.4
 
 # --- Dev/test ---
-pytest==8.4.1
+pytest==9.0.3
