@@ -24,7 +24,7 @@ from .scoring.types import GameLog, Injury, Player, Projection, ScheduledGame
 DATA_DIR = Path(__file__).resolve().parents[1]
 
 SPORT_DIRS: dict[str, Path] = {
-    "nba": DATA_DIR / "sample_data",
+    "nba": DATA_DIR / "sample_data_nba",
     "mlb": DATA_DIR / "sample_data_mlb",
 }
 
