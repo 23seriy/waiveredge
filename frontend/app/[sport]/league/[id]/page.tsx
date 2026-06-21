@@ -120,6 +120,7 @@ export default function LeaguePage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unresolved, setUnresolved] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -135,9 +136,15 @@ export default function LeaguePage() {
         setError("__paywall__");
       } else if (rr.ok) {
         setRecs((await rr.json()) as RecsPayload);
+      } else {
+        const rb = await rr.json().catch(() => null);
+        const detail = rb?.detail;
+        const recsMsg = typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : `Recs failed (${rr.status})`;
+        setError(recsMsg);
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      const msg = e instanceof Error ? e.message : typeof e === "string" ? e : "Failed to load";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -147,12 +154,23 @@ export default function LeaguePage() {
 
   async function syncRoster() {
     setSyncing(true);
+    setUnresolved([]);
     try {
       const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/sync`, { method: "POST" });
-      if (!res.ok) { const b = await res.json().catch(() => null); throw new Error(b?.detail || `Sync failed (${res.status})`); }
+      if (!res.ok) {
+        const b = await res.json().catch(() => null);
+        const detail = b?.detail;
+        const msg = typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : `Sync failed (${res.status})`;
+        throw new Error(msg);
+      }
+      const syncResult = await res.json();
+      if (syncResult.unresolved && syncResult.unresolved.length > 0) {
+        setUnresolved(syncResult.unresolved);
+      }
       await loadData();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Sync failed");
+      const msg = e instanceof Error ? e.message : typeof e === "string" ? e : "Sync failed";
+      setError(msg);
     } finally {
       setSyncing(false);
     }
@@ -194,6 +212,15 @@ export default function LeaguePage() {
               <button onClick={syncRoster} disabled={syncing} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90 disabled:opacity-40">
                 <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> Sync from Yahoo
               </button>
+            </div>
+          )}
+
+          {unresolved.length > 0 && (
+            <div className="rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 mb-4">
+              <p className="text-sm text-accent">
+                Couldn&apos;t match {unresolved.length} player{unresolved.length !== 1 ? "s" : ""}: {unresolved.join(", ")}.
+                These players may not be in our data yet (recent callups, minor leaguers).
+              </p>
             </div>
           )}
 

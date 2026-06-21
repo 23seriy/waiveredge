@@ -188,3 +188,29 @@ def test_manual_invalid_scoring_mode_rejected():
         "scoring_mode": "invalid_mode",
     })
     assert resp.status_code == 422  # Literal validation
+
+
+# ---------------------------------------------------------------------------
+# League endpoints — error response shape (detail must be a string)
+# ---------------------------------------------------------------------------
+
+def test_league_404_detail_is_string():
+    resp = client.get("/api/leagues/999999")
+    assert resp.status_code == 404
+    body = resp.json()
+    assert isinstance(body["detail"], str), f"detail should be a string, got {type(body['detail'])}"
+
+
+def test_league_sync_404_detail_is_string():
+    resp = client.post("/api/leagues/999999/sync")
+    body = resp.json()
+    # Either 404 (not found) or 402 (paywall) — either way, detail must be a string.
+    assert resp.status_code in (402, 404)
+    assert isinstance(body["detail"], str), f"detail should be a string, got {type(body['detail'])}"
+
+
+def test_league_recs_404_detail_is_string():
+    resp = client.get("/api/leagues/999999/recs")
+    body = resp.json()
+    assert resp.status_code in (402, 404)
+    assert isinstance(body["detail"], str), f"detail should be a string, got {type(body['detail'])}"
