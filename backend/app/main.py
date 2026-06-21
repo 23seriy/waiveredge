@@ -49,18 +49,20 @@ async def lifespan(a):
 
 
 app = FastAPI(title="WaiverEdge API", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(alerts_router)
 app.include_router(auth_router)
 app.include_router(billing_router)
 app.include_router(espn_router)
 app.include_router(leagues_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 @app.get("/api/sports")
