@@ -42,7 +42,7 @@ type StreamersPayload = {
   streamers: Streamer[];
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
 
 function formatDate(iso: string) {
   const d = new Date(iso + "T12:00:00");

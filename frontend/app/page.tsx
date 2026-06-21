@@ -104,9 +104,15 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-line mt-16 py-6">
-        <p className="text-center text-xs text-muted">
-          WaiverEdge &middot; Real sports data &middot; No logos or trademarks used
-        </p>
+        <div className="flex items-center justify-center gap-4 text-xs text-muted">
+          <span>WaiverEdge</span>
+          <span>&middot;</span>
+          <Link href="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
+          <span>&middot;</span>
+          <Link href="/mlb/streamers" className="hover:text-accent transition-colors">MLB Streamers</Link>
+          <span>&middot;</span>
+          <span>Real sports data</span>
+        </div>
       </footer>
     </div>
   );

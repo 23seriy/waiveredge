@@ -5,7 +5,7 @@ import { Suspense, useState } from "react";
 import { ArrowLeft, ArrowRight, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
 
 const SPORT_META: Record<string, { name: string; icon: string; full: string }> = {
   nba: { name: "NBA", icon: "\u{1F3C0}", full: "NBA Basketball" },
