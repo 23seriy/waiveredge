@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from .scoring_systems import DEFAULT_POINTS_SCORING, fantasy_points
+from .scoring_systems import fantasy_points
 from .types import GameLog
 
 # Clamp range. A matchup can swing a projection by at most +/-15%.
@@ -51,15 +51,13 @@ def _clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, x))
 
 
-def compute_dvp(all_logs: list[GameLog], weights: dict[str, float] | None = None) -> DvPTable:
-    w = weights or DEFAULT_POINTS_SCORING
-
+def compute_dvp(all_logs: list[GameLog], weights: dict[str, float]) -> DvPTable:
     # fantasy points allowed by (opponent, position) and league-wide by position.
     allowed: dict[tuple[int, str], list[float]] = defaultdict(list)
     league: dict[str, list[float]] = defaultdict(list)
 
     for lg in all_logs:
-        fp = fantasy_points(lg.stats, w)
+        fp = fantasy_points(lg.stats, weights)
         allowed[(lg.opponent_id, lg.position)].append(fp)
         league[lg.position].append(fp)
 

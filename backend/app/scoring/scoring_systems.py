@@ -11,9 +11,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-# A common points-league scoring profile (close to ESPN/Yahoo points defaults).
-# Every league can override these weights; the engine is agnostic to the values.
-DEFAULT_POINTS_SCORING: dict[str, float] = {
+# NBA default points-league scoring — only for use in NBA-specific code paths.
+# For sport-agnostic code, always get weights from SportConfig.default_points_scoring.
+NBA_DEFAULT_POINTS_SCORING: dict[str, float] = {
     "pts": 1.0,
     "reb": 1.2,
     "ast": 1.5,
@@ -23,19 +23,24 @@ DEFAULT_POINTS_SCORING: dict[str, float] = {
     "turnover": -1.0,
 }
 
+# Backwards-compat alias — only used by nba_fixtures.py.
+DEFAULT_POINTS_SCORING = NBA_DEFAULT_POINTS_SCORING
+
 # Stat keys we read off a box-score line. Matches the balldontlie /v1/stats shape.
 STAT_KEYS = ("pts", "reb", "ast", "stl", "blk", "fg3m", "turnover", "min")
 
 
-def fantasy_points(stat_line: dict, weights: dict[str, float] | None = None) -> float:
+def fantasy_points(stat_line: dict, weights: dict[str, float]) -> float:
     """Weighted fantasy points for a single game's stat line.
+
+    ``weights`` is required — there is no silent fallback to a sport-specific
+    default.  Callers must supply the correct weights for their sport.
 
     Unknown keys in ``weights`` simply contribute 0 if absent from the line, and
     stats present in the line but absent from ``weights`` are ignored — so the
     same function serves any league's custom scoring.
     """
-    w = weights or DEFAULT_POINTS_SCORING
-    return float(sum(float(stat_line.get(k, 0) or 0) * mult for k, mult in w.items()))
+    return float(sum(float(stat_line.get(k, 0) or 0) * mult for k, mult in weights.items()))
 
 
 # ---------------------------------------------------------------------------
@@ -97,31 +102,25 @@ class LeagueScoring:
 
     ``mode='points'`` ranks by the weighted `fantasy_points` sum (`weights`).
     ``mode='categories'`` ranks by a per-category z-score vector over `categories`.
+
+    No defaults — callers must supply sport-specific weights and categories
+    to prevent silent cross-sport fallback bugs.
     """
     mode: str = "points"
-    weights: dict = field(default_factory=lambda: dict(DEFAULT_POINTS_SCORING))
-    categories: list = field(default_factory=lambda: list(NINE_CAT))
-
-
-def league_from_config(cfg: dict | None) -> LeagueScoring:
-    """Build a LeagueScoring from a loose dict (API request / fixture roster)."""
-    if not cfg:
-        return LeagueScoring()
-    if cfg.get("mode") == "categories":
-        cats = [c for c in (cfg.get("categories") or NINE_CAT) if c in CATEGORY_META]
-        return LeagueScoring(mode="categories", categories=cats or list(NINE_CAT))
-    return LeagueScoring(mode="points", weights=cfg.get("weights") or dict(DEFAULT_POINTS_SCORING))
+    weights: dict = field(default_factory=dict)
+    categories: list = field(default_factory=list)
 
 
 def league_from_sport_config(cfg: dict | None, sport_cfg: object) -> LeagueScoring:
-    """Build a LeagueScoring using a SportConfig for defaults (sport-aware).
+    """Build a LeagueScoring using a SportConfig for defaults.
 
-    Falls back to the sport's defaults when the request/fixture config is missing
-    or incomplete. ``sport_cfg`` is a SportConfig from app.sports.
+    Falls back to the *sport's own* defaults when the request/fixture config is
+    missing or incomplete.  There is no cross-sport fallback — sport_cfg must
+    have ``default_points_scoring``, ``default_categories``, and ``category_meta``.
     """
-    defaults_weights = getattr(sport_cfg, "default_points_scoring", DEFAULT_POINTS_SCORING)
-    defaults_cats = getattr(sport_cfg, "default_categories", NINE_CAT)
-    cat_meta = getattr(sport_cfg, "category_meta", CATEGORY_META)
+    defaults_weights = sport_cfg.default_points_scoring  # type: ignore[union-attr]
+    defaults_cats = sport_cfg.default_categories          # type: ignore[union-attr]
+    cat_meta = sport_cfg.category_meta                    # type: ignore[union-attr]
 
     if not cfg:
         return LeagueScoring(weights=dict(defaults_weights), categories=list(defaults_cats))
