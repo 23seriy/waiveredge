@@ -136,9 +136,15 @@ export default function LeaguePage() {
         setError("__paywall__");
       } else if (rr.ok) {
         setRecs((await rr.json()) as RecsPayload);
+      } else {
+        const rb = await rr.json().catch(() => null);
+        const detail = rb?.detail;
+        const recsMsg = typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : `Recs failed (${rr.status})`;
+        setError(recsMsg);
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      const msg = e instanceof Error ? e.message : typeof e === "string" ? e : "Failed to load";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -151,14 +157,20 @@ export default function LeaguePage() {
     setUnresolved([]);
     try {
       const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/sync`, { method: "POST" });
-      if (!res.ok) { const b = await res.json().catch(() => null); throw new Error(b?.detail || `Sync failed (${res.status})`); }
+      if (!res.ok) {
+        const b = await res.json().catch(() => null);
+        const detail = b?.detail;
+        const msg = typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : `Sync failed (${res.status})`;
+        throw new Error(msg);
+      }
       const syncResult = await res.json();
       if (syncResult.unresolved && syncResult.unresolved.length > 0) {
         setUnresolved(syncResult.unresolved);
       }
       await loadData();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Sync failed");
+      const msg = e instanceof Error ? e.message : typeof e === "string" ? e : "Sync failed";
+      setError(msg);
     } finally {
       setSyncing(false);
     }

@@ -12,7 +12,7 @@ uvicorn app.main:app --reload          # http://localhost:8000
 # Frontend
 cd frontend && npm run dev             # http://localhost:3000
 
-# Unit tests (87 currently)
+# Unit tests (90 currently)
 python -m pytest tests/ -v
 ```
 
@@ -161,7 +161,7 @@ cd backend && python -m pytest tests/ -v
 
 | Suite | Count | Covers |
 |---|---|---|
-| `test_api.py` | 14 | All HTTP endpoints via TestClient |
+| `test_api.py` | 17 | All HTTP endpoints + league error shapes |
 | `test_categories.py` | 5 | 9-cat z-score engine |
 | `test_matchups.py` | 9 | DvP table, clamping, shrinkage, positions |
 | `test_name_resolution.py` | 13 | Accent folding, punctuation, deduplication |
@@ -169,7 +169,7 @@ cd backend && python -m pytest tests/ -v
 | `test_recommendations.py` | 7 | Service layer (build_recs, top_streamers) |
 | `test_scoring.py` | 10 | Core engine integration |
 | `test_scoring_systems.py` | 12 | LeagueScoring, sport config, fantasy_points |
-| **Total** | **87** | |
+| **Total** | **90** | |
 
 ---
 
