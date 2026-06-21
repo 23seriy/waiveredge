@@ -16,7 +16,7 @@ sys.path.insert(0, str(BACKEND))
 
 from app.data.nba_fixtures import build_real_fixtures  # noqa: E402
 
-SAMPLE_DIR = BACKEND / "sample_data"
+SAMPLE_DIR = BACKEND / "sample_data_nba"
 
 
 def main() -> int:

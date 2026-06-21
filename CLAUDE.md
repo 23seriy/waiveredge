@@ -24,7 +24,7 @@ pip install -r requirements.txt
 # Run the API (materializes real NBA fixtures lazily on first request)
 uvicorn app.main:app --reload                  # http://localhost:8000
 
-# Refresh the real-data fixtures (writes backend/sample_data/*.json)
+# Refresh the real-data fixtures (writes backend/sample_data_nba/*.json)
 python scripts/dump_real_fixtures.py
 
 # CLI prototype that prints the ranked action list against real data
@@ -38,7 +38,7 @@ python -m pytest                                # pytest discovery
 python tests/test_scoring.py                    # stdlib-only manual runner
 python -m pytest tests/test_scoring.py::test_schedule_density_beats_talent   # single test
 
-# Frontend (Next.js 14 app router)
+# Frontend (Next.js 15 app router)
 cd ../frontend
 npm install
 npm run dev                                     # http://localhost:3000
@@ -76,7 +76,7 @@ preference (inner is most stable):
 
 3. **`backend/app/`** — service + API.
    - `recommendations.py` — `load_fixtures()` (lazy-materializes
-     `sample_data/*.json`), `build_recommendations(fx)`, `manual_recommendations()`
+     `sample_data_nba/*.json` / `sample_data_mlb/*.json`), `build_recommendations(fx, sport)`, `manual_recommendations()`
      (accent-folding name resolver via `_normalize_name` — `Jokić` matches
      `Jokic`).
    - `main.py` — FastAPI: `/health`, `/api/recommendations/sample`,
@@ -86,9 +86,9 @@ preference (inner is most stable):
    - `models.py` / `db.py` — SQLAlchemy 2.0; `migrations/0001_init.sql` is the
      source of truth for the schema today.
 
-Frontend (`frontend/`) is a minimal Next.js 14 app-router UI — manual-roster form
-posts to `/api/recommendations/manual` and renders the ranked list. No state
-library, no styling framework yet.
+Frontend (`frontend/`) is a Next.js 15 app-router UI with Tailwind CSS — sport-
+scoped routes (`/[sport]/`), manual-roster form, streamers, league connect, and
+pricing pages.
 
 ### Data flow
 
@@ -96,13 +96,13 @@ library, no styling framework yet.
 stats.nba.com ──(nba_api)──► nba_fixtures.build_real_fixtures
                                   │
                                   ▼
-                     backend/sample_data/*.json (gitignored)
+                     backend/sample_data_nba/*.json (gitignored)
                                   │
                 load_fixtures() ──┴──► build_recommendations ──► rank_waiver_adds ──► API
 ```
 
 The same `build_recommendations` is used by the CLI prototype and the API; the
-future per-user endpoint will swap the data source from `sample_data/*.json` to
+future per-user endpoint will swap the data source from `sample_data_nba/*.json` to
 Postgres queries but reuse the engine unchanged.
 
 ### Invariants to preserve
