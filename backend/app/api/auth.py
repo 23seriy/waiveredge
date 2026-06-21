@@ -57,7 +57,7 @@ def yahoo_callback(code: str = Query(...), state: str = Query(""), db: Session =
     yc = YahooFantasyClient(tokens)
     leagues = yc.user_leagues(game_key=game_key)
     if not leagues:
-        return RedirectResponse(f"{FRONTEND_BASE}/connect?error=no_leagues&sport={game_key}")
+        return RedirectResponse(f"{FRONTEND_BASE}/{game_key}/connect?error=no_leagues")
 
     # For v1 we auto-pick the first NBA league.
     league = leagues[0]

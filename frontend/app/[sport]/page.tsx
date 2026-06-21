@@ -379,13 +379,13 @@ export default function SportDashboard() {
         </h1>
         <p className="text-muted text-base max-w-xl mx-auto mb-8 leading-relaxed">
           Paste your roster below or{" "}
-          <Link href="/connect" className="text-accent hover:underline">connect your league</Link>{" "}
+          <Link href={`/${sport}/connect`} className="text-accent hover:underline">connect your league</Link>{" "}
           for personalized waiver adds — powered by schedule density, matchups, and recent form.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
           <Link
-            href="/connect"
+            href={`/${sport}/connect`}
             className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
           >
             Connect your league <ArrowRight size={16} />
@@ -415,7 +415,7 @@ export default function SportDashboard() {
       <section className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold">Quick Roster Check</h2>
-          <p className="text-xs text-muted">or <Link href="/connect" className="text-accent hover:underline">connect your league</Link> for full features</p>
+          <p className="text-xs text-muted">or <Link href={`/${sport}/connect`} className="text-accent hover:underline">connect your league</Link> for full features</p>
         </div>
 
         <form onSubmit={submit} className="mb-8">

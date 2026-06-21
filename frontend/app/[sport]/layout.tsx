@@ -1,67 +1,42 @@
-"use client";
-
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import { Flame, Zap } from "lucide-react";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import SportShell from "./sport-shell";
 
-const SPORT_META: Record<string, { name: string; icon: string }> = {
-  nba: { name: "NBA", icon: "\u{1F3C0}" },
-  mlb: { name: "MLB", icon: "\u26BE" },
+const SPORT_SEO: Record<string, { title: string; description: string }> = {
+  nba: {
+    title: "NBA Waiver Wire Rankings — WaiverEdge",
+    description: "Find the best NBA fantasy basketball waiver wire pickups ranked for your roster. Points and 9-Cat leagues supported. Powered by schedule density, matchups, and recent form.",
+  },
+  mlb: {
+    title: "MLB Waiver Wire Rankings — WaiverEdge",
+    description: "Find the best MLB fantasy baseball waiver wire pickups ranked for your roster. Points and 5x5 roto leagues supported. Powered by schedule density, matchups, and recent form.",
+  },
 };
 
-const VALID_SPORTS = new Set(["nba", "mlb"]);
+export async function generateMetadata({ params }: { params: Promise<{ sport: string }> }): Promise<Metadata> {
+  const { sport } = await params;
+  const seo = SPORT_SEO[sport] || {
+    title: `${sport.toUpperCase()} Waiver Wire — WaiverEdge`,
+    description: "Fantasy sports waiver wire rankings powered by schedule density, matchups, and recent form.",
+  };
+
+  return {
+    title: seo.title,
+    description: seo.description,
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      siteName: "WaiverEdge",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.title,
+      description: seo.description,
+    },
+  };
+}
 
 export default function SportLayout({ children }: { children: ReactNode }) {
-  const params = useParams();
-  const sport = params.sport as string;
-  const meta = SPORT_META[sport];
-
-  if (!VALID_SPORTS.has(sport)) {
-    return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Sport not found</h1>
-          <p className="text-muted mb-4">Choose a supported sport:</p>
-          <Link href="/" className="text-accent hover:underline">← Back to home</Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-bg">
-      <header className="border-b border-line bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center">
-                <Zap size={16} className="text-bg" />
-              </div>
-              <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
-            </Link>
-            <span className="text-xs bg-accent/10 text-accent border border-accent/30 rounded-md px-2 py-1 font-semibold">
-              {meta.icon} {meta.name}
-            </span>
-          </div>
-          <nav className="flex items-center gap-4">
-            <Link href={`/${sport}/streamers`} className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">
-              <Flame size={14} /> Streamers
-            </Link>
-            <Link href="/pricing" className="text-sm text-muted hover:text-accent transition-colors">
-              Pricing
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      {children}
-
-      <footer className="border-t border-line mt-16 py-6">
-        <p className="text-center text-xs text-muted">
-          WaiverEdge &middot; Real sports data &middot; No logos or trademarks used
-        </p>
-      </footer>
-    </div>
-  );
+  return <SportShell>{children}</SportShell>;
 }
