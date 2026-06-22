@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # OpenAI API key for LLM-generated rationales.
     openai_api_key: str = ""
 
+    # Sentry error monitoring (https://sentry.io — free tier: 5k errors/mo)
+    sentry_dsn: str = ""
+
     # Stripe (https://dashboard.stripe.com/apikeys)
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
