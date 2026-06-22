@@ -214,7 +214,7 @@ export default function LeaguePage() {
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center mb-8">
               <p className="text-sm text-muted mb-3">No roster synced yet.</p>
               <button onClick={syncRoster} disabled={syncing} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90 disabled:opacity-40">
-                <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> Sync from Yahoo
+                <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> Sync from {league.platform === "espn" ? "ESPN" : "Yahoo"}
               </button>
             </div>
           )}

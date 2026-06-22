@@ -26,6 +26,7 @@ DATA_DIR = Path(__file__).resolve().parents[1]
 SPORT_DIRS: dict[str, Path] = {
     "nba": DATA_DIR / "sample_data_nba",
     "mlb": DATA_DIR / "sample_data_mlb",
+    "wnba": DATA_DIR / "sample_data_wnba",
 }
 
 FIXTURE_FILES = ("teams", "players", "game_logs", "schedule", "injuries", "roster")
@@ -63,13 +64,26 @@ def fixture_build_status(sport: str) -> dict:
 
 
 def _is_fresh(sport: str) -> bool:
-    """Check if fixtures exist and are younger than CACHE_MAX_AGE_SECONDS."""
+    """Check if fixtures exist, are younger than CACHE_MAX_AGE_SECONDS,
+    and belong to the current scoring week (Monday–Sunday)."""
     data_dir = SPORT_DIRS.get(sport, SPORT_DIRS["nba"])
     roster_file = data_dir / "roster.json"
     if not roster_file.exists():
         return False
     age = _time.time() - roster_file.stat().st_mtime
-    return age < CACHE_MAX_AGE_SECONDS
+    if age >= CACHE_MAX_AGE_SECONDS:
+        return False
+    # Check if the cached week is still the current week.
+    try:
+        from datetime import date, timedelta
+        roster_data = _json.loads(roster_file.read_text())
+        cached_week_start = roster_data.get("week_start", "")
+        current_monday = date.today() - timedelta(days=date.today().weekday())
+        if cached_week_start and cached_week_start != current_monday.isoformat():
+            return False
+    except Exception:
+        pass
+    return True
 
 
 def _build_fixtures_background(sport: str) -> None:
@@ -82,6 +96,9 @@ def _build_fixtures_background(sport: str) -> None:
         data_dir = SPORT_DIRS.get(sport, SPORT_DIRS["nba"])
         if sport == "mlb":
             from .data.mlb_fixtures import build_real_fixtures
+            build_real_fixtures(data_dir)
+        elif sport == "wnba":
+            from .data.wnba_fixtures import build_real_fixtures
             build_real_fixtures(data_dir)
         else:
             from .data.nba_fixtures import build_real_fixtures

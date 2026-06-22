@@ -16,7 +16,7 @@ const PRO_FEATURES = [
   "Everything in Free",
   "Personalized roster recommendations",
   "Yahoo & ESPN league auto-import",
-  "9-Cat & 5x5 z-score mode",
+  "H2H Points, 9-Cat & 5x5 scoring modes",
   "Live injury alerts (coming soon)",
   "Unlimited leagues",
 ];
