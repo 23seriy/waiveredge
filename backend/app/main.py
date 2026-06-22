@@ -10,9 +10,13 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+import sentry_sdk
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from .api.alerts import router as alerts_router
 from .api.auth import router as auth_router
@@ -40,15 +44,21 @@ class ManualRosterRequest(BaseModel):
         default_factory=lambda: list(NINE_CAT),
         description="Active categories for category mode (ignored in points mode). "
                     "Defaults to the standard 9-cat set.")
-    sport: str = Field(default="nba", description="Sport key (nba, mlb).")
+    sport: str = Field(default="nba", description="Sport key (nba, mlb, wnba).")
 
 @asynccontextmanager
 async def lifespan(a):
+    if settings.sentry_dsn:
+        sentry_sdk.init(dsn=settings.sentry_dsn, traces_sample_rate=0.1, send_default_pii=False)
     start_scheduler()
     yield
 
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="WaiverEdge API", version="0.1.0", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -87,7 +97,8 @@ def health() -> dict:
 
 
 @app.get("/api/recommendations/sample")
-def recommendations_sample(mode: Literal["points", "categories"] = "points", sport: str = "nba") -> dict:
+@limiter.limit("30/minute")
+def recommendations_sample(request: Request, mode: Literal["points", "categories"] = "points", sport: str = "nba") -> dict:
     """Ranked waiver adds for the sample roster (runs the live scoring engine)."""
     sc = get_sport(sport)
     if not sc.has_data:
@@ -127,7 +138,8 @@ def explain_recommendation(rec: dict) -> dict:
 
 
 @app.get("/api/streamers")
-def streamers(top: int = 30, sport: str = "nba") -> dict:
+@limiter.limit("30/minute")
+def streamers(request: Request, top: int = 30, sport: str = "nba") -> dict:
     """Top streaming pickups this week + schedule density grid. No auth required."""
     sc = get_sport(sport)
     if not sc.has_data:

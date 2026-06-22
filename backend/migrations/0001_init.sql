@@ -68,9 +68,14 @@ CREATE TABLE IF NOT EXISTS injuries (
 );
 
 CREATE TABLE IF NOT EXISTS users (
-    id         SERIAL PRIMARY KEY,
-    email      VARCHAR(256) UNIQUE NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    id                      SERIAL PRIMARY KEY,
+    email                   VARCHAR(256) UNIQUE NOT NULL,
+    tier                    VARCHAR(16) NOT NULL DEFAULT 'free',
+    stripe_customer_id      VARCHAR(64),
+    stripe_subscription_id  VARCHAR(64),
+    alert_email             BOOLEAN NOT NULL DEFAULT TRUE,
+    alert_push              BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS league_connections (
@@ -88,8 +93,26 @@ CREATE INDEX IF NOT EXISTS ix_conn_user ON league_connections(user_id);
 CREATE TABLE IF NOT EXISTS rosters (
     id            SERIAL PRIMARY KEY,
     connection_id INTEGER NOT NULL REFERENCES league_connections(id),
-    player_id     INTEGER NOT NULL REFERENCES players(id),
+    player_id     INTEGER NOT NULL,
     slot          VARCHAR(8) NOT NULL,
     droppable     BOOLEAN NOT NULL DEFAULT TRUE
 );
 CREATE INDEX IF NOT EXISTS ix_roster_conn ON rosters(connection_id);
+CREATE INDEX IF NOT EXISTS ix_roster_player ON rosters(player_id);
+
+CREATE TABLE IF NOT EXISTS injury_alerts (
+    id                   SERIAL PRIMARY KEY,
+    connection_id        INTEGER NOT NULL REFERENCES league_connections(id),
+    sport                VARCHAR(8) NOT NULL DEFAULT 'nba',
+    injured_player_name  VARCHAR(128) NOT NULL,
+    injured_player_id    INTEGER,
+    injury_status        VARCHAR(32) NOT NULL,
+    injury_note          VARCHAR(256),
+    pickup_player_name   VARCHAR(128),
+    pickup_player_id     INTEGER,
+    pickup_marginal      NUMERIC(8,2),
+    pickup_rationale     VARCHAR(512),
+    is_read              BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_alert_conn ON injury_alerts(connection_id);
