@@ -133,19 +133,19 @@ def build_real_fixtures(output_dir: Path, season: int | None = None) -> None:
     for team in teams:
         try:
             roster_data = _get(f"{ESPN_CORE}/teams/{team['id']}/roster", {"season": season})
-            for group in roster_data.get("athletes", []):
-                for athlete in group.get("items", []):
-                    pid = int(athlete.get("id", 0))
-                    if pid in seen_ids:
-                        continue
-                    seen_ids.add(pid)
-                    pos = athlete.get("position", {}).get("abbreviation", "G")
-                    players.append({
-                        "id": pid,
-                        "name": athlete.get("displayName", athlete.get("fullName", "")),
-                        "team_id": team["id"],
-                        "positions": _norm_pos(pos),
-                    })
+            for athlete in roster_data.get("athletes", []):
+                pid = int(athlete.get("id", 0))
+                if pid in seen_ids:
+                    continue
+                seen_ids.add(pid)
+                pos_raw = athlete.get("position", {})
+                pos = pos_raw.get("abbreviation", "G") if isinstance(pos_raw, dict) else str(pos_raw)
+                players.append({
+                    "id": pid,
+                    "name": athlete.get("displayName", athlete.get("fullName", "")),
+                    "team_id": team["id"],
+                    "positions": _norm_pos(pos),
+                })
             time.sleep(0.1)
         except Exception as e:
             print(f"  Warning: roster failed for {team['abbreviation']}: {e}")
