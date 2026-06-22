@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Flame, Zap } from "lucide-react";
 import type { ReactNode } from "react";
@@ -15,8 +15,10 @@ const VALID_SPORTS = new Set(["nba", "mlb", "wnba"]);
 
 export default function SportShell({ children }: { children: ReactNode }) {
   const params = useParams();
+  const pathname = usePathname();
   const sport = params.sport as string;
   const meta = SPORT_META[sport];
+  const onStreamers = pathname.endsWith("/streamers");
 
   if (!VALID_SPORTS.has(sport)) {
     return (
@@ -46,9 +48,15 @@ export default function SportShell({ children }: { children: ReactNode }) {
             </span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link href={`/${sport}/streamers`} className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">
-              <Flame size={14} /> Streamers
-            </Link>
+            {onStreamers ? (
+              <Link href={`/${sport}`} className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">
+                <Zap size={14} /> Dashboard
+              </Link>
+            ) : (
+              <Link href={`/${sport}/streamers`} className="flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">
+                <Flame size={14} /> Streamers
+              </Link>
+            )}
             <Link href="/pricing" className="text-sm text-muted hover:text-accent transition-colors">
               Pricing
             </Link>
