@@ -44,7 +44,7 @@ type Payload = {
   resolved_count?: number;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const STORAGE_KEY = "waiveredge.roster.v1";
 const MODE_KEY = "waiveredge.mode.v1";
 
@@ -384,35 +384,38 @@ export default function SportDashboard() {
   return (
     <main className="max-w-4xl mx-auto px-4">
       {/* Hero section */}
-      <section className="py-12 md:py-16 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-          {SPORT_INFO[sport]?.name ?? sport.toUpperCase()} Waiver Wire<br />
-          <span className="text-accent">ranked for your roster</span>
-        </h1>
-        <p className="text-muted text-base max-w-xl mx-auto mb-8 leading-relaxed">
-          Paste your roster below or{" "}
-          <Link href={`/${sport}/connect`} className="text-accent hover:underline">connect your league</Link>{" "}
-          for personalized waiver adds — powered by schedule density, matchups, and recent form.
-        </p>
+      <section className="relative py-12 md:py-16 text-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(240,136,62,0.06)_0%,_transparent_50%)] pointer-events-none" />
+        <div className="relative">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 animate-fade-in">
+            {SPORT_INFO[sport]?.name ?? sport.toUpperCase()} Waiver Wire<br />
+            <span className="text-accent">ranked for your roster</span>
+          </h1>
+          <p className="text-muted text-base max-w-xl mx-auto mb-8 leading-relaxed animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            Paste your roster below or{" "}
+            <Link href={`/${sport}/connect`} className="text-accent hover:underline">connect your league</Link>{" "}
+            for personalized waiver adds — powered by schedule density, matchups, and recent form.
+          </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
-          <Link
-            href={`/${sport}/connect`}
-            className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
-          >
-            Connect your league <ArrowRight size={16} />
-          </Link>
-          <Link
-            href={`/${sport}/streamers`}
-            className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
-          >
-            <Flame size={14} /> Free weekly streamers
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+            <Link
+              href={`/${sport}/connect`}
+              className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-lg shadow-accent/20"
+            >
+              Connect your league <ArrowRight size={16} />
+            </Link>
+            <Link
+              href={`/${sport}/streamers`}
+              className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
+            >
+              <Flame size={14} /> Free weekly streamers
+            </Link>
+          </div>
+
+          <p className="text-xs text-muted/70 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            Works with {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} &middot; {POINTS_ONLY_SPORTS.has(sport) ? "H2H Points" : `${getCatLabel(sport)} & Points`} leagues
+          </p>
         </div>
-
-        <p className="text-xs text-muted">
-          Works with {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} &middot; {POINTS_ONLY_SPORTS.has(sport) ? "H2H Points" : `${getCatLabel(sport)} & Points`} leagues
-        </p>
       </section>
 
       {/* Mode control */}
@@ -431,7 +434,7 @@ export default function SportDashboard() {
         </div>
 
         <form onSubmit={submit} className="mb-8">
-          <div className="rounded-xl border border-line bg-card overflow-hidden">
+          <div className="rounded-xl border border-line bg-card overflow-hidden transition-colors focus-within:border-accent/40">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-surface/50">
               <span className="text-xs text-muted font-medium uppercase tracking-wider">
                 Your Roster
@@ -449,14 +452,14 @@ export default function SportDashboard() {
               value={rosterText}
               onChange={(e) => setRosterText(e.target.value)}
               placeholder="One player name per line&#10;&#10;Nikola Jokic&#10;Luka Doncic&#10;..."
-              className="w-full bg-transparent px-4 py-3 text-sm font-mono text-gray-200 placeholder:text-muted/50 resize-y focus:outline-none"
+              className="w-full bg-transparent px-4 py-3 text-sm font-mono text-gray-200 placeholder:text-muted/40 resize-y focus:outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading || !rosterText.trim()}
-            className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-sm font-semibold text-bg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-3 text-sm font-semibold text-bg transition-all hover:brightness-110 hover:shadow-lg hover:shadow-accent/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:brightness-100"
           >
             {loading ? (
               <>
@@ -472,7 +475,7 @@ export default function SportDashboard() {
 
         {/* Error */}
         {error && (
-          <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6">
+          <div className="rounded-xl border border-neg/30 bg-neg/5 px-4 py-4 mb-6 animate-fade-in">
             <p className="text-sm text-neg">{error}</p>
           </div>
         )}
@@ -486,7 +489,7 @@ export default function SportDashboard() {
 
         {/* Results */}
         {data && !loading && (
-          <>
+          <div className="animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-base font-semibold">
@@ -502,13 +505,13 @@ export default function SportDashboard() {
                   )}
                 </p>
               </div>
-              <span className="text-xs text-muted">
+              <span className="text-xs text-muted bg-surface px-2 py-1 rounded">
                 {data.recommendations.length} add{data.recommendations.length !== 1 ? "s" : ""}
               </span>
             </div>
 
             {data.unresolved && data.unresolved.length > 0 && (
-              <div className="rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 mb-4">
+              <div className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 mb-4">
                 <p className="text-sm text-accent">
                   Couldn&apos;t match: {data.unresolved.join(", ")}. Fix spelling or remove the line.
                 </p>
@@ -516,9 +519,11 @@ export default function SportDashboard() {
             )}
 
             {data.recommendations.length === 0 ? (
-              <p className="text-sm text-muted text-center py-12">
-                No free agents outrank your roster this week.
-              </p>
+              <div className="text-center py-16 rounded-xl border border-line bg-card/50">
+                <span className="text-3xl block mb-3">🎉</span>
+                <p className="text-sm font-medium mb-1">Your roster is stacked</p>
+                <p className="text-xs text-muted">No free agents outrank your current players this week.</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {data.recommendations.map((r, i) => (
@@ -526,31 +531,31 @@ export default function SportDashboard() {
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
       </section>
 
       {/* Value props */}
-      <section className="max-w-3xl mx-auto mt-8 mb-4">
-        <div className="rounded-lg bg-surface/50 border border-line p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+      <section className="max-w-3xl mx-auto mt-10 mb-6">
+        <div className="rounded-xl bg-surface/30 border border-line/50 p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-left">
             <div>
-              <p className="text-sm font-medium flex items-center gap-1.5 mb-1">
+              <p className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
                 <Calendar size={14} className="text-accent" /> Schedule density
               </p>
-              <p className="text-xs text-muted">More games = more streaming value. We rank who plays most.</p>
+              <p className="text-xs text-muted leading-relaxed">More games = more streaming value. We rank who plays most.</p>
             </div>
             <div>
-              <p className="text-sm font-medium flex items-center gap-1.5 mb-1">
+              <p className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
                 <TrendingUp size={14} className="text-pos" /> Matchup quality
               </p>
-              <p className="text-xs text-muted">Soft opponents boost projections. We factor opponent strength.</p>
+              <p className="text-xs text-muted leading-relaxed">Soft opponents boost projections. We factor opponent strength.</p>
             </div>
             <div>
-              <p className="text-sm font-medium flex items-center gap-1.5 mb-1">
+              <p className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
                 <Shield size={14} className="text-accent" /> Read-only access
               </p>
-              <p className="text-xs text-muted">We never modify your team. Connect with confidence.</p>
+              <p className="text-xs text-muted leading-relaxed">We never modify your team. Connect with confidence.</p>
             </div>
           </div>
         </div>

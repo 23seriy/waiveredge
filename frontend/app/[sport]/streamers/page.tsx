@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
-  ArrowLeft,
   ArrowRight,
   Calendar,
   ChevronDown,
@@ -42,7 +41,7 @@ type StreamersPayload = {
   streamers: Streamer[];
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 function formatDate(iso: string) {
   const d = new Date(iso + "T12:00:00");
@@ -274,16 +273,11 @@ export default function StreamersPage() {
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-8">
-      <Link
-        href={`/${sport}`}
-        className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors mb-4"
-      >
-        <ArrowLeft size={12} /> Back to {sport.toUpperCase()} Dashboard
-      </Link>
-
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-2">
-          <Flame size={22} className="text-accent" />
+      <div className="mb-8 animate-fade-in">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-3 flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center">
+            <Flame size={20} className="text-accent" />
+          </div>
           Top Streamers This Week
         </h1>
         <p className="text-sm text-muted leading-relaxed max-w-2xl">
@@ -313,7 +307,7 @@ export default function StreamersPage() {
       )}
 
       {data && !loading && (
-        <>
+        <div className="animate-fade-in">
           <ScheduleGrid grid={data.schedule_grid} week={data.week} />
 
           <section>
@@ -321,7 +315,7 @@ export default function StreamersPage() {
               <h2 className="text-base font-semibold flex items-center gap-2">
                 <TrendingUp size={16} className="text-pos" /> Top Streaming Pickups
               </h2>
-              <span className="text-xs text-muted">
+              <span className="text-xs text-muted bg-surface px-2 py-1 rounded">
                 {data.streamers.length} players · by projected fpts
               </span>
             </div>
@@ -333,20 +327,20 @@ export default function StreamersPage() {
             </div>
           </section>
 
-          <div className="mt-12 rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
+          <div className="mt-12 rounded-xl border border-accent/30 bg-gradient-to-b from-accent/5 to-transparent p-8 text-center">
             <h3 className="text-lg font-bold mb-2">Want picks for YOUR roster?</h3>
-            <p className="text-sm text-muted mb-4 max-w-md mx-auto">
+            <p className="text-sm text-muted mb-5 max-w-md mx-auto">
               The streamers above are generic. Paste your roster and the engine ranks who to
               add and who to drop — personalized value-over-replacement.
             </p>
             <Link
               href={`/${sport}`}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-lg shadow-accent/20"
             >
               <Zap size={16} /> Rank adds for my team <ArrowRight size={14} />
             </Link>
           </div>
-        </>
+        </div>
       )}
     </main>
   );
