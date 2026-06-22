@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, Crown, Loader2, Zap } from "lucide-react";
+import { ArrowRight, Check, Crown, Loader2, Zap } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 type Plan = "monthly" | "season";
 
 const FREE_FEATURES = [
@@ -17,7 +17,7 @@ const PRO_FEATURES = [
   "Personalized roster recommendations",
   "Yahoo & ESPN league auto-import",
   "H2H Points, 9-Cat & 5x5 scoring modes",
-  "Live injury alerts (coming soon)",
+  "Live injury alerts",
   "Unlimited leagues",
 ];
 
@@ -51,28 +51,31 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg">
-      <header className="border-b border-line bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-bg flex flex-col">
+      <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="h-7 w-7 rounded-lg bg-accent flex items-center justify-center">
-              <Zap size={16} className="text-bg" />
+            <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
+              <Zap size={18} className="text-bg" />
             </div>
             <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
           </Link>
           <Link href="/" className="text-sm text-muted hover:text-accent transition-colors">
-            ← Back
+            ← Home
           </Link>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold tracking-tight mb-3">Upgrade to Pro</h1>
+      <main className="flex-1 max-w-3xl mx-auto px-4 py-16">
+        <div className="text-center mb-12 animate-fade-in">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-accent/10 mb-4">
+            <Crown size={24} className="text-accent" />
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-3">Upgrade to Pro</h1>
           <p className="text-sm text-muted max-w-lg mx-auto">
             Pro unlocks personalized recommendations for{" "}
             <em className="text-gray-200 not-italic font-medium">your</em> actual roster
-            — MLB and NBA.
+            — MLB, WNBA, and NBA.
           </p>
         </div>
 
@@ -145,7 +148,7 @@ export default function PricingPage() {
             <button
               onClick={handleCheckout}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-sm font-semibold text-bg hover:opacity-90 disabled:opacity-40"
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-3 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-lg shadow-accent/20 disabled:opacity-40 disabled:hover:shadow-none disabled:hover:brightness-100"
             >
               {loading ? (
                 <>
@@ -161,7 +164,7 @@ export default function PricingPage() {
         </div>
 
         {error && (
-          <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mt-6 text-center">
+          <div className="rounded-xl border border-neg/30 bg-neg/5 px-4 py-4 mt-6 text-center animate-fade-in">
             <p className="text-sm text-neg">{error}</p>
           </div>
         )}
@@ -169,12 +172,32 @@ export default function PricingPage() {
         <p className="text-center text-xs text-muted mt-8">
           Secure checkout powered by Stripe. Cancel anytime.
         </p>
+
+        {/* FAQ */}
+        <section className="mt-16 mb-8">
+          <h2 className="text-lg font-bold text-center mb-6">Frequently Asked Questions</h2>
+          <div className="space-y-4 max-w-lg mx-auto">
+            {[
+              { q: "What sports are supported?", a: "MLB, WNBA, and NBA — with NFL and NHL on the roadmap." },
+              { q: "Can I cancel anytime?", a: "Yes. Cancel from your Stripe billing portal — no questions asked." },
+              { q: "Do you modify my roster?", a: "Never. WaiverEdge uses read-only access to analyze your team." },
+              { q: "What platforms are supported?", a: "Yahoo and ESPN Fantasy. WNBA is ESPN only." },
+            ].map((faq) => (
+              <div key={faq.q} className="rounded-xl border border-line bg-card p-4">
+                <p className="text-sm font-medium mb-1">{faq.q}</p>
+                <p className="text-xs text-muted">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t border-line mt-16 py-6">
-        <p className="text-center text-xs text-muted">
-          WaiverEdge &middot; Real sports data &middot; No logos or trademarks used
-        </p>
+      <footer className="border-t border-line/50 bg-card/30">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <p className="text-center text-[11px] text-muted/50">
+            &copy; {new Date().getFullYear()} WaiverEdge
+          </p>
+        </div>
       </footer>
     </div>
   );
