@@ -6,7 +6,15 @@ const SPORTS = [
     key: "mlb",
     name: "MLB Baseball",
     icon: "\u26BE",
-    description: "Points & 5x5 roto leagues",
+    description: "H2H Points & 5x5 leagues",
+    active: true,
+    note: "In-season",
+  },
+  {
+    key: "wnba",
+    name: "WNBA Basketball",
+    icon: "\u{1F3C0}",
+    description: "H2H Points leagues \u2014 ESPN only",
     active: true,
     note: "In-season",
   },
@@ -14,7 +22,7 @@ const SPORTS = [
     key: "nba",
     name: "NBA Basketball",
     icon: "\u{1F3C0}",
-    description: "Points & 9-Cat leagues",
+    description: "H2H Points & 9-Cat leagues",
     active: false,
     note: "Offseason \u2014 returns Oct 2026",
   },
@@ -96,7 +104,7 @@ export default function Home() {
               <p className="text-sm font-medium">Works with Yahoo &amp; ESPN</p>
               <p className="text-xs text-muted">
                 Connect your league for personalized picks, or paste your roster manually.
-                Points, 9-Cat, and 5x5 scoring modes.
+                H2H Points, 9-Cat, and 5x5 scoring modes.
               </p>
             </div>
           </div>

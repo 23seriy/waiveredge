@@ -10,6 +10,8 @@ psycopg2-binary==2.9.10
 httpx==0.28.1
 python-dotenv==1.2.2
 stripe>=11.0.0
+sentry-sdk[fastapi]>=2.0.0
+slowapi>=0.1.9
 
 # Real NBA data straight from stats.nba.com (the source balldontlie wraps). The app
 # materializes its fixtures from this on first use. Pulls pandas/numpy/requests.

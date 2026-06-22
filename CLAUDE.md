@@ -76,7 +76,7 @@ preference (inner is most stable):
 
 3. **`backend/app/`** — service + API.
    - `recommendations.py` — `load_fixtures()` (lazy-materializes
-     `sample_data_nba/*.json` / `sample_data_mlb/*.json`), `build_recommendations(fx, sport)`, `manual_recommendations()`
+     `sample_data_nba/*.json` / `sample_data_mlb/*.json` / `sample_data_wnba/*.json`), `build_recommendations(fx, sport)`, `manual_recommendations()`
      (accent-folding name resolver via `_normalize_name` — `Jokić` matches
      `Jokic`).
    - `main.py` — FastAPI: `/health`, `/api/recommendations/sample`,
@@ -94,9 +94,11 @@ pricing pages.
 
 ```
 stats.nba.com ──(nba_api)──► nba_fixtures.build_real_fixtures
+statsapi.mlb.com ──────────► mlb_fixtures.build_real_fixtures
+ESPN public API ───────────► wnba_fixtures.build_real_fixtures
                                   │
                                   ▼
-                     backend/sample_data_nba/*.json (gitignored)
+                     backend/sample_data_{nba,mlb,wnba}/*.json (gitignored)
                                   │
                 load_fixtures() ──┴──► build_recommendations ──► rank_waiver_adds ──► API
 ```

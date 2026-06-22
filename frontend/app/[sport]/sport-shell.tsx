@@ -8,9 +8,10 @@ import type { ReactNode } from "react";
 const SPORT_META: Record<string, { name: string; icon: string }> = {
   nba: { name: "NBA", icon: "\u{1F3C0}" },
   mlb: { name: "MLB", icon: "\u26BE" },
+  wnba: { name: "WNBA", icon: "\u{1F3C0}" },
 };
 
-const VALID_SPORTS = new Set(["nba", "mlb"]);
+const VALID_SPORTS = new Set(["nba", "mlb", "wnba"]);
 
 export default function SportShell({ children }: { children: ReactNode }) {
   const params = useParams();

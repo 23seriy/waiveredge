@@ -105,6 +105,59 @@ def test_fantasy_points_handles_none_values():
     assert fantasy_points(line, {"pts": 1.0, "reb": 1.0}) == 5.0
 
 
+# ---------------------------------------------------------------------------
+# WNBA sport config
+# ---------------------------------------------------------------------------
+
+def test_wnba_sport_config_exists():
+    from app.sports import get_sport
+    wnba = get_sport("wnba")
+    assert wnba.key == "wnba"
+    assert wnba.active is True
+    assert wnba.has_data is True
+    assert "G" in wnba.positions
+    assert "F" in wnba.positions
+    assert "C" in wnba.positions
+
+
+def test_wnba_default_scoring_is_basketball():
+    from app.sports import get_sport
+    wnba = get_sport("wnba")
+    assert "pts" in wnba.default_points_scoring
+    assert "reb" in wnba.default_points_scoring
+    assert "ast" in wnba.default_points_scoring
+    # Should NOT have baseball stats
+    assert "hr" not in wnba.default_points_scoring
+    assert "ip" not in wnba.default_points_scoring
+
+
+def test_wnba_categories_are_nine_cat():
+    from app.sports import get_sport
+    wnba = get_sport("wnba")
+    assert len(wnba.default_categories) == 9
+    for cat in wnba.default_categories:
+        assert cat in wnba.category_meta, f"{cat} missing from WNBA category_meta"
+
+
+def test_wnba_league_from_sport_config_defaults():
+    from app.sports import get_sport
+    wnba = get_sport("wnba")
+    ls = league_from_sport_config(None, wnba)
+    assert ls.mode == "points"
+    assert ls.weights == dict(wnba.default_points_scoring)
+
+
+def test_wnba_espn_game_code():
+    from app.data.espn import GAME_CODES
+    assert GAME_CODES["wnba"] == "wfba"
+
+
+def test_wnba_in_sport_dirs():
+    from app.recommendations import SPORT_DIRS
+    assert "wnba" in SPORT_DIRS
+    assert "sample_data_wnba" in str(SPORT_DIRS["wnba"])
+
+
 # ---- manual runner ----------------------------------------------------------
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]

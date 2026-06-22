@@ -120,10 +120,12 @@ backend/                  FastAPI + Postgres
   migrations/
   sample_data_nba/        ← materialized REAL NBA fixtures (gitignored)
   sample_data_mlb/        ← materialized REAL MLB fixtures (gitignored)
+  sample_data_wnba/       ← materialized REAL WNBA fixtures (gitignored)
   scripts/
-  tests/                  ← 90 unit tests
+  tests/                  ← 96 unit tests
 frontend/                 Next.js 15 + Tailwind CSS
   app/                    ← /, /[sport]/, /[sport]/streamers, /[sport]/connect, /[sport]/league/[id], /pricing
+                            Supported sports: nba, mlb, wnba
 docker-compose.yml        Postgres for local dev
 ```
 
@@ -177,7 +179,8 @@ unlocks the dormant role-bump / availability signals) and a documented SLA.
 - [x] LLM-powered AI rationales (OpenAI gpt-4o-mini)
 - [x] Fixture caching + background builds (24h cache, progress polling)
 - [x] Home page UX redesign (hero, clean header, sport-aware)
-- [x] 90 unit tests (API + engine + projections + matchups + name resolution + scoring systems)
+- [x] WNBA support (ESPN leagues, ESPN public API for fixtures)
+- [x] 96 unit tests (API + engine + projections + matchups + name resolution + scoring systems + WNBA)
 - [x] Deploy configs (Dockerfile, Railway, Fly.io, Vercel)
 - [ ] Deploy MVP to production
 - [ ] Nightly DvP recompute job + `team_dvp` cache

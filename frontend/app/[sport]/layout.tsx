@@ -5,11 +5,15 @@ import SportShell from "./sport-shell";
 const SPORT_SEO: Record<string, { title: string; description: string }> = {
   nba: {
     title: "NBA Waiver Wire Rankings — WaiverEdge",
-    description: "Find the best NBA fantasy basketball waiver wire pickups ranked for your roster. Points and 9-Cat leagues supported. Powered by schedule density, matchups, and recent form.",
+    description: "Find the best NBA fantasy basketball waiver wire pickups ranked for your roster. H2H Points and 9-Cat leagues supported. Powered by schedule density, matchups, and recent form.",
   },
   mlb: {
     title: "MLB Waiver Wire Rankings — WaiverEdge",
-    description: "Find the best MLB fantasy baseball waiver wire pickups ranked for your roster. Points and 5x5 roto leagues supported. Powered by schedule density, matchups, and recent form.",
+    description: "Find the best MLB fantasy baseball waiver wire pickups ranked for your roster. H2H Points and 5x5 leagues supported. Powered by schedule density, matchups, and recent form.",
+  },
+  wnba: {
+    title: "WNBA Waiver Wire Rankings — WaiverEdge",
+    description: "Find the best WNBA fantasy basketball waiver wire pickups ranked for your roster. H2H Points leagues supported. ESPN only. Powered by schedule density, matchups, and recent form.",
   },
 };
 
