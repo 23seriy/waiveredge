@@ -46,7 +46,7 @@ type RecsPayload = {
   recommendations: Recommendation[];
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const CAT_LABELS: Record<string, string> = {
   fg_pct: "FG%", ft_pct: "FT%", fg3m: "3PM", pts: "PTS", reb: "REB",
   ast: "AST", stl: "STL", blk: "BLK", turnover: "TO",
