@@ -188,7 +188,7 @@ function StreamerRow({ s, rank }: { s: Streamer; rank: number }) {
             </span>
             {rank <= 3 && (
               <span className="text-xs bg-accent/15 text-accent rounded-full px-2 py-0.5 font-medium flex items-center gap-0.5">
-                <Flame size={10} /> top pick
+                <Flame size={12} /> top pick
               </span>
             )}
           </div>
