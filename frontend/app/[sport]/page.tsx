@@ -411,7 +411,7 @@ export default function SportDashboard() {
         </div>
 
         <p className="text-xs text-muted">
-          Works with {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} &middot; {POINTS_ONLY_SPORTS.has(sport) ? "Points" : `${getCatLabel(sport)} & Points`} leagues
+          Works with {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} &middot; {POINTS_ONLY_SPORTS.has(sport) ? "H2H Points" : `${getCatLabel(sport)} & Points`} leagues
         </p>
       </section>
 
