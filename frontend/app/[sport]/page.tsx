@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-type Sport = "nba" | "mlb";
+type Sport = "nba" | "mlb" | "wnba";
 type ScoringMode = "points" | "categories";
 
 type Recommendation = {
@@ -57,7 +57,13 @@ const SPORT_INFO: Record<Sport, { name: string; sample: string }> = {
     name: "MLB",
     sample: "Aaron Judge\nShohei Ohtani\nMookie Betts\nFreddie Freeman\nCorbin Carroll\nJulio Rodriguez\nBobby Witt Jr.\nCorey Seager\nRonald Acuna Jr.\nMatt Olson",
   },
+  wnba: {
+    name: "WNBA",
+    sample: "A'ja Wilson\nBreanna Stewart\nNapheesa Collier\nCaitlin Clark\nAlyssa Thomas\nKelsey Plum\nJewell Loyd\nSabrina Ionescu\nDearica Hamby\nKahleah Copper",
+  },
 };
+
+const ESPN_ONLY_SPORTS = new Set<Sport>(["wnba"]);
 
 const CAT_LABELS: Record<string, string> = {
   fg_pct: "FG%", ft_pct: "FT%", fg3m: "3PM", pts: "PTS", reb: "REB",
@@ -399,7 +405,7 @@ export default function SportDashboard() {
         </div>
 
         <p className="text-xs text-muted">
-          Works with Yahoo &amp; ESPN &middot; {getCatLabel(sport)} &amp; Points leagues
+          Works with {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} &middot; {getCatLabel(sport)} &amp; Points leagues
         </p>
       </section>
 
