@@ -26,6 +26,7 @@ DATA_DIR = Path(__file__).resolve().parents[1]
 SPORT_DIRS: dict[str, Path] = {
     "nba": DATA_DIR / "sample_data_nba",
     "mlb": DATA_DIR / "sample_data_mlb",
+    "wnba": DATA_DIR / "sample_data_wnba",
 }
 
 FIXTURE_FILES = ("teams", "players", "game_logs", "schedule", "injuries", "roster")
@@ -82,6 +83,9 @@ def _build_fixtures_background(sport: str) -> None:
         data_dir = SPORT_DIRS.get(sport, SPORT_DIRS["nba"])
         if sport == "mlb":
             from .data.mlb_fixtures import build_real_fixtures
+            build_real_fixtures(data_dir)
+        elif sport == "wnba":
+            from .data.wnba_fixtures import build_real_fixtures
             build_real_fixtures(data_dir)
         else:
             from .data.nba_fixtures import build_real_fixtures

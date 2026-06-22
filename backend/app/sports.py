@@ -111,10 +111,47 @@ MLB = SportConfig(
 
 
 # ---------------------------------------------------------------------------
+# WNBA  (ESPN-only — Yahoo does not offer WNBA fantasy)
+# ---------------------------------------------------------------------------
+
+WNBA = SportConfig(
+    key="wnba",
+    name="WNBA Basketball",
+    icon="\U0001f3c0",
+    active=True,
+    has_data=True,
+    note="In-season \u2014 ESPN leagues only",
+    positions=("G", "F", "C"),
+    default_points_scoring={
+        "pts": 1.0, "reb": 1.2, "ast": 1.5, "stl": 3.0,
+        "blk": 3.0, "fg3m": 0.5, "turnover": -1.0,
+    },
+    raw_stats=("pts", "reb", "ast", "stl", "blk", "fg3m", "turnover",
+               "fgm", "fga", "ftm", "fta"),
+    default_categories=("fg_pct", "ft_pct", "fg3m", "pts", "reb", "ast", "stl", "blk", "turnover"),
+    category_meta={
+        "fg_pct":   {"percentage": True, "made": "fgm", "att": "fga"},
+        "ft_pct":   {"percentage": True, "made": "ftm", "att": "fta"},
+        "fg3m":     {"stat": "fg3m"},
+        "pts":      {"stat": "pts"},
+        "reb":      {"stat": "reb"},
+        "ast":      {"stat": "ast"},
+        "stl":      {"stat": "stl"},
+        "blk":      {"stat": "blk"},
+        "turnover": {"stat": "turnover", "negative": True},
+    },
+    category_labels={
+        "fg_pct": "FG%", "ft_pct": "FT%", "fg3m": "3PM", "pts": "PTS", "reb": "REB",
+        "ast": "AST", "stl": "STL", "blk": "BLK", "turnover": "TO",
+    },
+)
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
-SPORTS: dict[str, SportConfig] = {s.key: s for s in (NBA, MLB)}
+SPORTS: dict[str, SportConfig] = {s.key: s for s in (NBA, MLB, WNBA)}
 SUPPORTED_KEYS = tuple(SPORTS.keys())
 
 

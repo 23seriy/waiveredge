@@ -10,7 +10,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
 const SPORT_META: Record<string, { name: string; icon: string; full: string }> = {
   nba: { name: "NBA", icon: "\u{1F3C0}", full: "NBA Basketball" },
   mlb: { name: "MLB", icon: "\u26BE", full: "MLB Baseball" },
+  wnba: { name: "WNBA", icon: "\u{1F3C0}", full: "WNBA Basketball" },
 };
+
+// Sports where Yahoo Fantasy is not available
+const ESPN_ONLY_SPORTS = new Set(["wnba"]);
 
 type ESPNTeam = { id: number; name: string; abbrev?: string; top_players?: string[] };
 
@@ -176,8 +180,8 @@ function ConnectContent() {
         </div>
       )}
 
-      {/* Yahoo */}
-      <div className="rounded-xl border border-line bg-card p-6 mb-4">
+      {/* Yahoo — hidden for ESPN-only sports */}
+      {!ESPN_ONLY_SPORTS.has(sport) && <div className="rounded-xl border border-line bg-card p-6 mb-4">
         <div className="flex items-center gap-3 mb-4">
           <span className="text-2xl">{meta.icon}</span>
           <div>
@@ -191,7 +195,7 @@ function ConnectContent() {
         >
           Connect with Yahoo <ExternalLink size={14} />
         </a>
-      </div>
+      </div>}
 
       {/* ESPN */}
       <div className="rounded-xl border border-line bg-card p-6 mb-8">

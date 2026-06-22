@@ -11,6 +11,14 @@ const SPORTS = [
     note: "In-season",
   },
   {
+    key: "wnba",
+    name: "WNBA Basketball",
+    icon: "\u{1F3C0}",
+    description: "Points & 9-Cat leagues \u2014 ESPN only",
+    active: true,
+    note: "In-season",
+  },
+  {
     key: "nba",
     name: "NBA Basketball",
     icon: "\u{1F3C0}",

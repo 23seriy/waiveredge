@@ -12,6 +12,11 @@ const SPORT_STREAMERS_SEO: Record<string, { title: string; description: string }
     description:
       "Top MLB fantasy baseball streaming pickups ranked by projected value. Schedule density, matchup quality, and recent form — updated weekly.",
   },
+  wnba: {
+    title: "WNBA Streamers This Week — WaiverEdge",
+    description:
+      "Top WNBA fantasy basketball streaming pickups ranked by projected value. Schedule density, matchup quality, and recent form — updated weekly.",
+  },
 };
 
 export async function generateMetadata({

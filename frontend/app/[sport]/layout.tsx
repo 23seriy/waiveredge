@@ -11,6 +11,10 @@ const SPORT_SEO: Record<string, { title: string; description: string }> = {
     title: "MLB Waiver Wire Rankings — WaiverEdge",
     description: "Find the best MLB fantasy baseball waiver wire pickups ranked for your roster. Points and 5x5 roto leagues supported. Powered by schedule density, matchups, and recent form.",
   },
+  wnba: {
+    title: "WNBA Waiver Wire Rankings — WaiverEdge",
+    description: "Find the best WNBA fantasy basketball waiver wire pickups ranked for your roster. Points and 9-Cat leagues supported. ESPN leagues. Powered by schedule density, matchups, and recent form.",
+  },
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ sport: string }> }): Promise<Metadata> {
