@@ -2,10 +2,10 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { ArrowLeft, ArrowRight, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowRight, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 const SPORT_META: Record<string, { name: string; icon: string; full: string }> = {
   nba: { name: "NBA", icon: "\u{1F3C0}", full: "NBA Basketball" },
@@ -153,15 +153,11 @@ function ConnectContent() {
 
   return (
     <main className="max-w-xl mx-auto px-4 py-8">
-      <Link
-        href={`/${sport}`}
-        className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors mb-6"
-      >
-        <ArrowLeft size={12} /> Back to {meta.name} Dashboard
-      </Link>
-
-      <div className="text-center mb-10">
-        <h1 className="text-2xl font-bold tracking-tight mb-3">
+      <div className="text-center mb-10 animate-fade-in">
+        <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-accent/10 mb-4">
+          <span className="text-2xl">{meta.icon}</span>
+        </div>
+        <h1 className="text-2xl font-extrabold tracking-tight mb-3">
           Connect Your {meta.name} League
         </h1>
         <p className="text-sm text-muted leading-relaxed max-w-md mx-auto">
@@ -209,19 +205,28 @@ function ConnectContent() {
         <ESPNConnectForm sport={sport} />
       </div>
 
-      <div className="rounded-lg bg-surface/50 border border-line p-4 mb-8">
+      <div className="rounded-xl bg-surface/30 border border-line/50 p-5 mb-8">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-          <div>
-            <p className="text-sm font-medium mb-1">Auto-import roster</p>
-            <p className="text-xs text-muted">Your actual players, positions, and slots.</p>
+          <div className="flex gap-3">
+            <span className="text-xs font-bold text-accent bg-accent/10 h-5 w-5 rounded flex items-center justify-center shrink-0 mt-0.5">1</span>
+            <div>
+              <p className="text-sm font-medium mb-0.5">Auto-import roster</p>
+              <p className="text-xs text-muted">Your actual players, positions, and slots.</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium mb-1">League scoring</p>
-            <p className="text-xs text-muted">Points or categories — detected automatically.</p>
+          <div className="flex gap-3">
+            <span className="text-xs font-bold text-accent bg-accent/10 h-5 w-5 rounded flex items-center justify-center shrink-0 mt-0.5">2</span>
+            <div>
+              <p className="text-sm font-medium mb-0.5">League scoring</p>
+              <p className="text-xs text-muted">Points or categories — detected automatically.</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium mb-1">Read-only access</p>
-            <p className="text-xs text-muted">We never modify your team.</p>
+          <div className="flex gap-3">
+            <span className="text-xs font-bold text-accent bg-accent/10 h-5 w-5 rounded flex items-center justify-center shrink-0 mt-0.5">3</span>
+            <div>
+              <p className="text-sm font-medium mb-0.5">Read-only access</p>
+              <p className="text-xs text-muted">We never modify your team.</p>
+            </div>
           </div>
         </div>
       </div>
