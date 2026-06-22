@@ -4,7 +4,7 @@ ESPN's Fantasy API is undocumented but well-reverse-engineered. Private leagues
 require two browser cookies (espn_s2 + SWID); public leagues need no auth.
 
 Base URL: https://lm-api-reads.fantasy.espn.com/apis/v3/games/{gameCode}/
-Game codes: fba (basketball), flb (baseball), fhl (hockey), ffl (football)
+Game codes: fba (basketball), flb (baseball), fhl (hockey), ffl (football), wfba (WNBA)
 """
 from __future__ import annotations
 
@@ -19,10 +19,17 @@ GAME_CODES = {
     "mlb": "flb",
     "nfl": "ffl",
     "nhl": "fhl",
+    "wnba": "wfba",
 }
 
 # ESPN stat ID → our fixture stat keys (basketball)
 ESPN_NBA_STAT_MAP: dict[int, str] = {
+    0: "pts", 1: "blk", 2: "stl", 3: "ast", 6: "reb",
+    11: "turnover", 17: "fg3m", 13: "fgm", 14: "fga", 15: "ftm", 16: "fta",
+}
+
+# ESPN stat ID → our fixture stat keys (WNBA basketball — same IDs as NBA)
+ESPN_WNBA_STAT_MAP: dict[int, str] = {
     0: "pts", 1: "blk", 2: "stl", 3: "ast", 6: "reb",
     11: "turnover", 17: "fg3m", 13: "fgm", 14: "fga", 15: "ftm", 16: "fta",
 }
@@ -78,7 +85,11 @@ class ESPNFantasyClient:
         scoring = raw_settings.get("scoringSettings", {})
         scoring_items = scoring.get("scoringItems", [])
 
-        stat_map = ESPN_MLB_STAT_MAP if self.sport == "mlb" else ESPN_NBA_STAT_MAP
+        stat_map = (
+            ESPN_MLB_STAT_MAP if self.sport == "mlb"
+            else ESPN_WNBA_STAT_MAP if self.sport == "wnba"
+            else ESPN_NBA_STAT_MAP
+        )
         weights: dict[str, float] = {}
         for item in scoring_items:
             stat_id = item.get("statId")

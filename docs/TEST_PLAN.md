@@ -12,7 +12,7 @@ uvicorn app.main:app --reload          # http://localhost:8000
 # Frontend
 cd frontend && npm run dev             # http://localhost:3000
 
-# Unit tests (90 currently)
+# Unit tests (96 currently)
 python -m pytest tests/ -v
 ```
 
@@ -168,8 +168,8 @@ cd backend && python -m pytest tests/ -v
 | `test_projections.py` | 11 | Recency weighting, edge cases, MLB weights |
 | `test_recommendations.py` | 7 | Service layer (build_recs, top_streamers) |
 | `test_scoring.py` | 10 | Core engine integration |
-| `test_scoring_systems.py` | 12 | LeagueScoring, sport config, fantasy_points |
-| **Total** | **90** | |
+| `test_scoring_systems.py` | 18 | LeagueScoring, sport config, fantasy_points, WNBA |
+| **Total** | **96** | |
 
 ---
 

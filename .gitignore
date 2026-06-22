@@ -34,5 +34,6 @@ npm-debug.log*
 # (and re-materialized by the app on demand), so keep the JSON out of git.
 backend/sample_data_nba/*.json
 backend/sample_data_mlb/*.json
+backend/sample_data_wnba/*.json
 
 .
