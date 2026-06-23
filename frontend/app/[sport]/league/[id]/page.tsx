@@ -6,8 +6,10 @@ import Link from "next/link";
 import {
   ArrowUpDown,
   Calendar,
+  Check,
   ChevronDown,
   Crown,
+  ExternalLink,
   Flame,
   Loader2,
   RefreshCw,
@@ -20,6 +22,7 @@ type Recommendation = {
   add_name: string;
   add_position: string;
   add_value: number;
+  drop_player_id: number | null;
   drop_name: string | null;
   n_games: number;
   soft_matchups: number;
@@ -68,8 +71,37 @@ function ZBadge({ cat, z }: { cat: string; z: number }) {
   );
 }
 
-function RecCard({ rec, rank, mode, sport }: { rec: Recommendation; rank: number; mode: string; sport: string }) {
+function RecCard({ rec, rank, mode, sport, platform, connectionId, onExecuted }: {
+  rec: Recommendation; rank: number; mode: string; sport: string;
+  platform: string; connectionId: string; onExecuted: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [executing, setExecuting] = useState(false);
+  const [execResult, setExecResult] = useState<{ success: boolean; detail: string; deep_link?: string } | null>(null);
+
+  async function handleExecute() {
+    setExecuting(true);
+    setExecResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ add_player_id: rec.add_player_id, drop_player_id: rec.drop_player_id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setExecResult(data);
+        if (data.success) onExecuted();
+      } else {
+        const detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+        setExecResult({ success: false, detail });
+      }
+    } catch {
+      setExecResult({ success: false, detail: "Network error — try again." });
+    } finally {
+      setExecuting(false);
+    }
+  }
   const isCategory = mode === "categories" && rec.per_cat_z;
   const marginalStr = mode === "categories"
     ? `${rec.marginal >= 0 ? "+" : ""}${rec.marginal.toFixed(1)}z`
@@ -100,10 +132,34 @@ function RecCard({ rec, rank, mode, sport }: { rec: Recommendation; rank: number
               {getCatKeys(sport).filter((c) => c in rec.per_cat_z!).map((cat) => <ZBadge key={cat} cat={cat} z={rec.per_cat_z![cat]} />)}
             </div>
           )}
-          <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 mt-2 text-xs text-muted hover:text-gray-300 transition-colors">
-            <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
-            {expanded ? "Less" : "Details"}
-          </button>
+          <div className="flex items-center gap-3 mt-2">
+            <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs text-muted hover:text-gray-300 transition-colors">
+              <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+              {expanded ? "Less" : "Details"}
+            </button>
+            {!execResult?.success && (
+              execResult?.deep_link ? (
+                <a href={execResult.deep_link} target="_blank" rel="noopener noreferrer"
+                   className="flex items-center gap-1 text-xs font-medium text-accent hover:text-accent/80 transition-colors">
+                  <ExternalLink size={12} /> Open in ESPN
+                </a>
+              ) : (
+                <button type="button" onClick={handleExecute} disabled={executing}
+                  className="flex items-center gap-1 rounded-md bg-accent/15 border border-accent/30 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/25 transition-colors disabled:opacity-40">
+                  {executing ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                  {executing ? "Executing…" : platform === "espn" ? "Open in ESPN" : "Execute move"}
+                </button>
+              )
+            )}
+            {execResult?.success && (
+              <span className="flex items-center gap-1 text-xs font-medium text-pos">
+                <Check size={12} /> Done!
+              </span>
+            )}
+          </div>
+          {execResult && !execResult.success && !execResult.deep_link && (
+            <p className="mt-1.5 text-xs text-neg">{execResult.detail}</p>
+          )}
           {expanded && <p className="mt-1.5 text-sm text-muted leading-relaxed">{rec.rationale}</p>}
         </div>
       </div>
@@ -255,7 +311,7 @@ export default function LeaguePage() {
                 </div>
                 <span className="text-xs text-muted">{recs.recommendations.length} add{recs.recommendations.length !== 1 ? "s" : ""}</span>
               </div>
-              <div className="space-y-3">{recs.recommendations.map((r, i) => <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={leagueSport} />)}</div>
+              <div className="space-y-3">{recs.recommendations.map((r, i) => <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={leagueSport} platform={league?.platform ?? ""} connectionId={connectionId} onExecuted={loadData} />)}</div>
             </>
           )}
           {recs && recs.recommendations.length === 0 && league.roster.length > 0 && (
