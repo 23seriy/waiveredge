@@ -184,3 +184,4 @@ unlocks the dormant role-bump / availability signals) and a documented SLA.
 - [x] Deploy configs (Dockerfile, Railway, Fly.io, Vercel)
 - [ ] Deploy MVP to production
 - [ ] Nightly DvP recompute job + `team_dvp` cache
+
