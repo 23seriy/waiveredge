@@ -92,6 +92,7 @@ class YahooFantasyClient:
     def __init__(self, tokens: dict):
         self._tokens = dict(tokens)
         self.tokens_refreshed = False
+        self.my_team_key_cached: str | None = None
 
     @property
     def access_token(self) -> str:
@@ -122,6 +123,21 @@ class YahooFantasyClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    def _post_xml(self, path: str, xml_body: str) -> httpx.Response:
+        """POST an XML payload to the Yahoo Fantasy API."""
+        url = f"{FANTASY_BASE}/{path}"
+        resp = httpx.post(
+            url,
+            content=xml_body.encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/xml",
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        return resp
 
     # ---- High-level queries ------------------------------------------------
 
@@ -241,18 +257,71 @@ class YahooFantasyClient:
                     break
                 for i in range(count):
                     p_data = players[str(i)]["player"][0]
-                    name, position = "", ""
+                    name, position, player_key = "", "", ""
                     for item in p_data:
                         if isinstance(item, dict):
                             if "name" in item:
                                 name = item["name"].get("full", "")
                             if "display_position" in item:
                                 position = item["display_position"]
+                            if "player_key" in item:
+                                player_key = item["player_key"]
                     if name:
-                        result.append({"name": name, "position": position})
+                        result.append({"name": name, "position": position, "player_key": player_key})
                 if count < batch_size:
                     break  # No more pages
                 start += count
             except (KeyError, IndexError, TypeError):
                 break
         return result
+
+    # ---- Transactions ------------------------------------------------------
+
+    def add_drop_player(
+        self,
+        league_key: str,
+        team_key: str,
+        add_player_key: str,
+        drop_player_key: str | None = None,
+    ) -> dict:
+        """Submit an add (or add/drop) transaction to Yahoo.
+
+        Returns {"success": True, ...} on success, or raises
+        httpx.HTTPStatusError on failure (e.g. player on waivers).
+        """
+        if drop_player_key:
+            xml = (
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                "<fantasy_content>"
+                "<transaction>"
+                "<type>add/drop</type>"
+                "<players>"
+                f"<player><player_key>{add_player_key}</player_key>"
+                "<transaction_data><type>add</type>"
+                f"<destination_team_key>{team_key}</destination_team_key>"
+                "</transaction_data></player>"
+                f"<player><player_key>{drop_player_key}</player_key>"
+                "<transaction_data><type>drop</type>"
+                f"<source_team_key>{team_key}</source_team_key>"
+                "</transaction_data></player>"
+                "</players>"
+                "</transaction>"
+                "</fantasy_content>"
+            )
+        else:
+            xml = (
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                "<fantasy_content>"
+                "<transaction>"
+                "<type>add</type>"
+                "<players>"
+                f"<player><player_key>{add_player_key}</player_key>"
+                "<transaction_data><type>add</type>"
+                f"<destination_team_key>{team_key}</destination_team_key>"
+                "</transaction_data></player>"
+                "</players>"
+                "</transaction>"
+                "</fantasy_content>"
+            )
+        resp = self._post_xml(f"league/{league_key}/transactions", xml)
+        return {"success": True, "status_code": resp.status_code, "body": resp.text[:500]}

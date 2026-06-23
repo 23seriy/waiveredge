@@ -8,6 +8,7 @@ Once a user has connected their Yahoo league via OAuth, these endpoints:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..data.yahoo import YahooFantasyClient
@@ -202,14 +203,29 @@ def _sync_yahoo(conn: LeagueConnection, db: Session) -> dict:
     scoring_data["free_agent_ids"] = fa_ids
     conn.scoring_json = scoring_data
 
-    db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).delete()
+    # Build name→Yahoo player data lookup for roster entries.
     yahoo_by_name = {p["name"]: p for p in yahoo_roster}
+
+    # Store free agent player keys for transaction support.
+    fa_by_name = {p["name"]: p for p in yahoo_fas}
+    fa_keys: dict[int, str] = {}
+    for p in fx["players"]:
+        fa_info = fa_by_name.get(p["name"])
+        if fa_info and fa_info.get("player_key") and p["id"] in fa_ids:
+            fa_keys[p["id"]] = fa_info["player_key"]
+
+    scoring_data["free_agent_keys"] = fa_keys
+    conn.scoring_json = scoring_data
+
+    db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).delete()
     players_by_id = {p["id"]: p for p in fx["players"]}
     for pid in resolved_ids:
         p = players_by_id.get(pid, {})
         yahoo_p = yahoo_by_name.get(p.get("name", ""), {})
         slot = yahoo_p.get("slot") or p.get("positions", ["UTIL"])[0] or "UTIL"
-        db.add(RosterEntry(connection_id=conn.id, player_id=pid, slot=slot, droppable=True))
+        player_key = yahoo_p.get("player_key", "")
+        db.add(RosterEntry(connection_id=conn.id, player_id=pid, player_key=player_key,
+                           slot=slot, droppable=True))
     db.commit()
 
     return {"synced": len(resolved_ids), "unresolved": unresolved,
@@ -264,4 +280,91 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
         "week": {"start": cfg["week_start"], "end": cfg["week_end"]},
         "scoring_mode": mode,
         "recommendations": build_recommendations(fx, sport),
+    }
+
+
+class ExecuteRequest(BaseModel):
+    add_player_id: int
+    drop_player_id: int | None = None
+
+
+@router.post("/{connection_id}/execute")
+def execute_transaction(connection_id: int, req: ExecuteRequest, db: Session = Depends(get_db)) -> dict:
+    """Execute an add/drop transaction on the user's fantasy platform.
+
+    Yahoo: submits via the official Transactions API.
+    ESPN: returns a deep link (no write API available).
+    """
+    require_pro(connection_id, db)
+    conn = _get_connection(connection_id, db)
+
+    if conn.platform == "espn":
+        return _execute_espn_link(conn, req)
+    if conn.platform == "yahoo":
+        return _execute_yahoo(conn, req, db)
+    raise HTTPException(status_code=400, detail=f"Unsupported platform: {conn.platform}")
+
+
+def _execute_yahoo(conn: LeagueConnection, req: ExecuteRequest, db: Session) -> dict:
+    """Execute an add/drop via Yahoo Fantasy API."""
+    if not conn.oauth_tokens:
+        raise HTTPException(status_code=400, detail="No OAuth tokens on this connection.")
+    if not conn.team_key:
+        raise HTTPException(status_code=400, detail="No team key — sync your roster first.")
+
+    # Look up Yahoo player keys from stored data.
+    scoring_data = conn.scoring_json or {}
+    fa_keys = scoring_data.get("free_agent_keys", {})
+    add_key = fa_keys.get(str(req.add_player_id)) or fa_keys.get(req.add_player_id)
+    if not add_key:
+        raise HTTPException(status_code=400, detail="Add player key not found. Sync your roster first.")
+
+    drop_key: str | None = None
+    if req.drop_player_id:
+        roster_entry = (
+            db.query(RosterEntry)
+            .filter(RosterEntry.connection_id == conn.id, RosterEntry.player_id == req.drop_player_id)
+            .first()
+        )
+        if not roster_entry or not roster_entry.player_key:
+            raise HTTPException(status_code=400, detail="Drop player key not found. Sync your roster first.")
+        drop_key = roster_entry.player_key
+
+    yc = YahooFantasyClient(conn.oauth_tokens)
+
+    try:
+        result = yc.add_drop_player(
+            league_key=conn.league_id,
+            team_key=conn.team_key,
+            add_player_key=add_key,
+            drop_player_key=drop_key,
+        )
+    except Exception as exc:
+        error_msg = str(exc)
+        if "waivers" in error_msg.lower():
+            raise HTTPException(status_code=409, detail="This player is on waivers — submit a waiver claim on Yahoo instead.") from exc
+        if "roster" in error_msg.lower() and "full" in error_msg.lower():
+            raise HTTPException(status_code=409, detail="Your roster is full. Select a player to drop.") from exc
+        raise HTTPException(status_code=502, detail=f"Yahoo transaction failed: {error_msg}") from exc
+    finally:
+        if yc.tokens_refreshed:
+            conn.oauth_tokens = yc.current_tokens
+            db.commit()
+
+    return {"success": True, "platform": "yahoo", "detail": "Transaction submitted to Yahoo."}
+
+
+def _execute_espn_link(conn: LeagueConnection, req: ExecuteRequest) -> dict:
+    """Return a deep link to ESPN's waiver page (no write API available)."""
+    tokens = conn.oauth_tokens or {}
+    espn_league_id = tokens.get("espn_league_id", "")
+    sport = _sport_for_league(conn.league_id)
+    game_code = {"nba": "fba", "mlb": "flb", "nfl": "ffl", "nhl": "fhl", "wnba": "wfba"}.get(sport, "fba")
+    season = tokens.get("season", 2026)
+    url = f"https://fantasy.espn.com/{game_code}/team?leagueId={espn_league_id}&seasonId={season}"
+    return {
+        "success": False,
+        "platform": "espn",
+        "detail": "ESPN does not support programmatic transactions. Use the link to make this move.",
+        "deep_link": url,
     }
