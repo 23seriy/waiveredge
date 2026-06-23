@@ -133,5 +133,6 @@ class RosterEntry(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     connection_id: Mapped[int] = mapped_column(ForeignKey("league_connections.id"), index=True)
     player_id: Mapped[int] = mapped_column(Integer, index=True)
+    player_key: Mapped[str | None] = mapped_column(String(32))  # Yahoo/ESPN platform key
     slot: Mapped[str] = mapped_column(String(8))
     droppable: Mapped[bool] = mapped_column(Boolean, default=True)
