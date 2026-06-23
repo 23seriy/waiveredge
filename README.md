@@ -182,6 +182,6 @@ unlocks the dormant role-bump / availability signals) and a documented SLA.
 - [x] WNBA support (ESPN leagues, ESPN public API for fixtures)
 - [x] 96 unit tests (API + engine + projections + matchups + name resolution + scoring systems + WNBA)
 - [x] Deploy configs (Dockerfile, Railway, Fly.io, Vercel)
-- [ ] Deploy MVP to production
+- [x] Deploy MVP to production (Render + Vercel)
 - [ ] Nightly DvP recompute job + `team_dvp` cache
 
