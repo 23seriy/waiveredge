@@ -181,6 +181,7 @@ def rank_category_adds(
     recs: list[Recommendation] = []
     for fa in free_agents:
         fav = value_of(fa)
+        fa_proj = projections.get(fa.id)
         candidates = [
             p for p in roster
             if (not droppable_ids or p.id in droppable_ids)
@@ -188,6 +189,7 @@ def rank_category_adds(
         ]
         drop = min(candidates, key=lambda p: roster_vals[p.id].total_z, default=None)
         drop_z = roster_vals[drop.id].total_z if drop else 0.0
+        drop_proj = projections.get(drop.id) if drop else None
         marginal = round(fav.total_z - drop_z, 3)
         helps = [c for c in weak if fav.per_cat_z.get(c, 0.0) > HELP_Z_THRESHOLD]
         recs.append(Recommendation(
@@ -200,6 +202,8 @@ def rank_category_adds(
             n_games=fav.n_games, soft_matchups=fav.soft_matchups,
             marginal=marginal,
             rationale=_cat_rationale(fa, fav, drop.name if drop else None, marginal, helps),
+            add_fppg=round(fa_proj.fppg, 1) if fa_proj else 0.0,
+            drop_fppg=round(drop_proj.fppg, 1) if drop_proj else 0.0,
             total_z=fav.total_z, per_cat_z=fav.per_cat_z, helps=helps,
         ))
     recs.sort(key=lambda r: r.marginal, reverse=True)
