@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: waiveredge
+  labels:
+    app: db-migrate
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: db-migrate
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres -U waiveredge; do
+                echo "Waiting for postgres..."
+                sleep 2
+              done
+      containers:
+        - name: migrate
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              for f in /migrations/*.sql; do
+                echo "=== Applying $f ==="
+                psql "$DATABASE_URL" -f "$f"
+              done
+              echo "=== All migrations applied ==="
+          env:
+            - name: DATABASE_URL
+              value: postgresql://waiveredge:waiveredge@postgres:5432/waiveredge
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+              readOnly: true
+      volumes:
+        - name: migrations
+          configMap:
+            name: migrations
