@@ -46,10 +46,31 @@ class ManualRosterRequest(BaseModel):
                     "Defaults to the standard 9-cat set.")
     sport: str = Field(default="nba", description="Sport key (nba, mlb, wnba).")
 
+def _run_migrations() -> None:
+    """Apply all SQL migrations on startup (idempotent — uses IF NOT EXISTS)."""
+    import logging
+    from pathlib import Path
+    from sqlalchemy import text
+    from .db import engine
+    log = logging.getLogger("waiveredge.migrations")
+    migrations_dir = Path(__file__).resolve().parent.parent / "migrations"
+    if not migrations_dir.exists():
+        return
+    for sql_file in sorted(migrations_dir.glob("*.sql")):
+        try:
+            sql = sql_file.read_text()
+            with engine.begin() as conn:
+                conn.execute(text(sql))
+            log.info("Applied migration: %s", sql_file.name)
+        except Exception as exc:
+            log.warning("Migration %s failed (may already be applied): %s", sql_file.name, exc)
+
+
 @asynccontextmanager
 async def lifespan(a):
     if settings.sentry_dsn:
         sentry_sdk.init(dsn=settings.sentry_dsn, traces_sample_rate=0.1, send_default_pii=False)
+    _run_migrations()
     start_scheduler()
     yield
 
