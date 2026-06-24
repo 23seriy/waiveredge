@@ -19,8 +19,6 @@ from ..models import LeagueConnection, User
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-FRONTEND_BASE = "http://localhost:3000"
-
 # Supported sports — active status reflects whether the season is currently running.
 # Update these seasonally (or drive from a config/DB later).
 SPORTS = [
@@ -53,11 +51,11 @@ def yahoo_callback(code: str = Query(...), state: str = Query(""), db: Session =
         raise HTTPException(status_code=400, detail=f"Token exchange failed: {exc}") from exc
 
     # state carries the sport game key from the login redirect.
-    game_key = state if state in ("nba", "mlb", "nfl", "nhl") else GAME_KEY
+    game_key = state if state in ("nba", "mlb", "nfl", "nhl", "wnba") else GAME_KEY
     yc = YahooFantasyClient(tokens)
     leagues = yc.user_leagues(game_key=game_key)
     if not leagues:
-        return RedirectResponse(f"{FRONTEND_BASE}/{game_key}/connect?error=no_leagues")
+        return RedirectResponse(f"{settings.frontend_url}/{game_key}/connect?error=no_leagues")
 
     # For v1 we auto-pick the first NBA league.
     league = leagues[0]
@@ -104,4 +102,4 @@ def yahoo_callback(code: str = Query(...), state: str = Query(""), db: Session =
     connection_id = conn.id
     db.commit()
 
-    return RedirectResponse(f"{FRONTEND_BASE}/{game_key}/league/{connection_id}")
+    return RedirectResponse(f"{settings.frontend_url}/{game_key}/league/{connection_id}")

@@ -17,8 +17,6 @@ from ..models import User
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
-FRONTEND_BASE = "http://localhost:3000"
-
 
 class CheckoutRequest(BaseModel):
     user_id: int
@@ -58,8 +56,8 @@ def create_checkout(req: CheckoutRequest, db: Session = Depends(get_db)) -> dict
         customer=customer_id,
         mode="subscription",
         line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{FRONTEND_BASE}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{FRONTEND_BASE}/billing/cancel",
+        success_url=f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{settings.frontend_url}/billing/cancel",
         metadata={"user_id": str(user.id)},
     )
     return {"checkout_url": session.url, "session_id": session.id}
