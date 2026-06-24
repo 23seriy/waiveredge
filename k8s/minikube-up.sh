@@ -39,7 +39,7 @@ ok "Backend image built"
 
 log "Building frontend image..."
 docker build \
-  --build-arg NEXT_PUBLIC_API_BASE=http://localhost:8000 \
+  --build-arg NEXT_PUBLIC_API_BASE=http://localhost:8001 \
   -t waiveredge-frontend:local \
   -f frontend/Dockerfile frontend/
 ok "Frontend image built"
@@ -120,15 +120,21 @@ ok "Frontend is ready"
 # ---------- 9. Port-forward ----------
 log "Setting up port-forwarding..."
 
-# Kill any existing port-forwards for these ports
-pkill -f "kubectl port-forward.*8000:8000" 2>/dev/null || true
+# Kill any existing port-forwards / proxy for these ports
+pkill -f "kubectl port-forward.*8001:8000" 2>/dev/null || true
 pkill -f "kubectl port-forward.*3000:3000" 2>/dev/null || true
 pkill -f "kubectl port-forward.*5432:5432" 2>/dev/null || true
+pkill -f "https-proxy.py" 2>/dev/null || true
 sleep 1
 
-kubectl port-forward -n waiveredge svc/backend 8000:8000 &
+# Backend HTTP on 8001 (internal), HTTPS proxy on 8000 (external).
+# Yahoo OAuth requires https:// redirect URIs, so we need this proxy.
+kubectl port-forward -n waiveredge svc/backend 8001:8000 &
 kubectl port-forward -n waiveredge svc/frontend 3000:3000 &
 kubectl port-forward -n waiveredge svc/postgres 5432:5432 &
+
+# Start HTTPS proxy: https://localhost:8000 → http://localhost:8001
+python3 k8s/https-proxy.py &
 
 echo ""
 echo -e "${GREEN}============================================${NC}"
@@ -136,9 +142,13 @@ echo -e "${GREEN} WaiverEdge is running on minikube!${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo ""
 echo -e "  Frontend:  ${CYAN}http://localhost:3000${NC}"
-echo -e "  Backend:   ${CYAN}http://localhost:8000${NC}"
-echo -e "  Health:    ${CYAN}http://localhost:8000/health${NC}"
+echo -e "  Backend:   ${CYAN}https://localhost:8000${NC}  (HTTPS for Yahoo OAuth)"
+echo -e "  Backend:   ${CYAN}http://localhost:8001${NC}   (HTTP direct)"
+echo -e "  Health:    ${CYAN}http://localhost:8001/health${NC}"
 echo -e "  Postgres:  ${CYAN}localhost:5432${NC} (user: waiveredge)"
+echo ""
+echo -e "  ${YELLOW}NOTE:${NC} First time visiting https://localhost:8000, your browser"
+echo -e "  will warn about the self-signed cert. Click Advanced → Proceed."
 echo ""
 echo -e "  Stop:      ${YELLOW}./k8s/minikube-down.sh${NC}"
 echo -e "  Logs:      ${YELLOW}kubectl logs -n waiveredge -l app=backend -f${NC}"

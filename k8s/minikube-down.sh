@@ -16,9 +16,10 @@ NC='\033[0m'
 log() { echo -e "${CYAN}[waiveredge]${NC} $*"; }
 ok()  { echo -e "${GREEN}[✓]${NC} $*"; }
 
-# Kill port-forwards
-log "Stopping port-forwards..."
+# Kill port-forwards and HTTPS proxy
+log "Stopping port-forwards and HTTPS proxy..."
 pkill -f "kubectl port-forward.*waiveredge" 2>/dev/null || true
+pkill -f "https-proxy.py" 2>/dev/null || true
 ok "Port-forwards stopped"
 
 # Delete namespace (removes everything)
