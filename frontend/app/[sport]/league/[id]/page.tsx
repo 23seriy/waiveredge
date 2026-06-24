@@ -28,6 +28,8 @@ type Recommendation = {
   soft_matchups: number;
   marginal: number;
   rationale: string;
+  add_fppg: number;
+  drop_fppg: number;
   total_z: number | null;
   per_cat_z: Record<string, number> | null;
   helps: string[] | null;
@@ -126,6 +128,11 @@ function RecCard({ rec, rank, mode, sport, platform, connectionId, onExecuted }:
             <span className="flex items-center gap-1"><Calendar size={12} /> {rec.n_games} game{rec.n_games !== 1 ? "s" : ""}</span>
             {rec.soft_matchups > 0 && <span className="flex items-center gap-1"><TrendingUp size={12} /> {rec.soft_matchups} soft</span>}
             {rec.drop_name && <span>drop <span className="text-accent font-medium">{rec.drop_name}</span></span>}
+          </div>
+          <div className="flex items-center gap-3 mt-1 text-xs text-muted">
+            <span className="flex items-center gap-1"><Flame size={11} className="text-pos" /> {rec.add_fppg} fppg</span>
+            <span>proj week {rec.add_value.toFixed(1)}</span>
+            {rec.drop_name && <span className="text-muted/60">drop {rec.drop_fppg} fppg</span>}
           </div>
           {isCategory && rec.per_cat_z && (
             <div className="flex flex-wrap gap-1 mt-2">
