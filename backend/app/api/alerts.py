@@ -20,16 +20,9 @@ from ..recommendations import build_recommendations, load_fixtures, resolve_name
 from ..scoring.engine import role_multiplier
 from ..scoring.types import Injury as ScoringInjury
 from ..scoring.types import Player
+from .leagues import _sport_for_league
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
-
-
-def _sport_for_league(league_id: str | None) -> str:
-    if not league_id:
-        return "nba"
-    game_id = league_id.split(".")[0]
-    mlb_ids = {"469", "454", "439", "422", "404", "388", "370", "357", "346", "328"}
-    return "mlb" if game_id in mlb_ids else "nba"
 
 
 def _detect_injury_opportunities(
