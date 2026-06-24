@@ -10,6 +10,7 @@ Flow:
 """
 from __future__ import annotations
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -37,6 +38,15 @@ def espn_teams(league_id: int, season: int = 2026, sport: str = "mlb") -> list[d
     client = ESPNFantasyClient(sport=sport)
     try:
         return client.teams(league_id, season)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            sport_name = sport.upper()
+            raise HTTPException(
+                status_code=404,
+                detail=f"ESPN league {league_id} not found for {sport_name} ({season}). "
+                       f"Make sure this is a {sport_name} league ID, not from another sport.",
+            ) from exc
+        raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
 
@@ -49,6 +59,15 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
     # Verify the league exists by fetching settings.
     try:
         settings = client.settings(req.league_id, req.season)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            sport_name = req.sport.upper()
+            raise HTTPException(
+                status_code=404,
+                detail=f"ESPN league {req.league_id} not found for {sport_name} ({req.season}). "
+                       f"Make sure this is a {sport_name} league ID, not from another sport.",
+            ) from exc
+        raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
 
@@ -60,14 +79,25 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
     # Fetch roster if we found the team.
     roster_data = []
     if team_id is not None:
-        roster_data = client.roster(req.league_id, req.season, team_id)
+        try:
+            roster_data = client.roster(req.league_id, req.season, team_id)
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=502, detail=f"ESPN roster fetch failed ({exc.response.status_code}).") from exc
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"ESPN roster fetch failed: {exc}") from exc
 
     # Fetch free agents.
-    fas = client.free_agents(req.league_id, req.season, count=200)
+    try:
+        fas = client.free_agents(req.league_id, req.season, count=200)
+    except Exception:
+        fas = []
 
     # Resolve names against our fixtures.
     sport = req.sport
-    fx = load_fixtures(sport)
+    try:
+        fx = load_fixtures(sport)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=f"{sport.upper()} data is not available yet. Please try again later.") from exc
     roster_names = [p["name"] for p in roster_data]
     resolved_ids, unresolved = resolve_names(roster_names, fx["players"])
     fa_names = [p["name"] for p in fas]

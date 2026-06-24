@@ -19,6 +19,9 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:3000,https://localhost:3000"
 
+    # Frontend URL for OAuth/billing redirects.
+    frontend_url: str = "http://localhost:3000"
+
     # Yahoo OAuth 2.0 (register at https://developer.yahoo.com/apps/)
     yahoo_client_id: str = ""
     yahoo_client_secret: str = ""

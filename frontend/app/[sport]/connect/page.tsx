@@ -41,7 +41,7 @@ function ESPNConnectForm({ sport }: { sport: string }) {
       const data = (await res.json()) as ESPNTeam[];
       setTeams(data);
       if (data.length === 0) setResult("No teams found in this league.");
-    } catch { setResult("Could not reach the API."); }
+    } catch (err) { setResult("Could not reach the API. The server may be waking up — please try again in 30 seconds."); }
     finally { setLoadingTeams(false); }
   }
 
@@ -65,7 +65,7 @@ function ESPNConnectForm({ sport }: { sport: string }) {
       if (!res.ok) { const b = await res.json().catch(() => null); setResult(b?.detail || `Failed (${res.status})`); return; }
       const data = await res.json();
       window.location.href = `/${sport}/league/${data.connection_id}`;
-    } catch { setResult("Could not reach the API."); }
+    } catch (err) { setResult(`Could not reach the API. The server may be waking up — please try again in 30 seconds.`); }
     finally { setLoading(false); }
   }
 
