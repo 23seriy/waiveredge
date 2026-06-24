@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date as date_cls
 from datetime import timedelta
 from pathlib import Path
@@ -183,67 +184,72 @@ def build_real_fixtures(output_dir: Path, season: int | None = None) -> None:
     active_players = [p for p in players if p["id"] in active_ids]
     print(f"[MLB] Fetching game logs for {len(active_players)} active players (skipping {len(players) - len(active_players)} IL/minors)...")
 
+    def _fetch_player_logs(p: dict) -> list[dict]:
+        """Fetch game logs for a single player. Returns list of log dicts."""
+        logs = []
+        try:
+            is_pitcher = p["positions"][0] in ("SP", "RP")
+            group = "pitching" if is_pitcher else "hitting"
+            data = _get(f"people/{p['id']}/stats", {
+                "stats": "gameLog", "group": group, "season": season,
+            })
+            for stat_block in data.get("stats", []):
+                for split in stat_block.get("splits", []):
+                    game_date = split.get("date", "")
+                    if not (log_start.isoformat() <= game_date <= log_end.isoformat()):
+                        continue
+                    st = split.get("stat", {})
+                    opp = split.get("opponent", {})
+                    team_info = split.get("team", {})
+
+                    if is_pitcher:
+                        stats = {
+                            "ip": float(st.get("inningsPitched", 0) or 0),
+                            "k_pitching": int(st.get("strikeOuts", 0) or 0),
+                            "w": 1 if st.get("wins", 0) else 0,
+                            "sv": 1 if st.get("saves", 0) else 0,
+                            "er": int(st.get("earnedRuns", 0) or 0),
+                            "ha": int(st.get("hits", 0) or 0),
+                            "bba": int(st.get("baseOnBalls", 0) or 0),
+                            "h": 0, "r": 0, "hr": 0, "rbi": 0, "sb": 0,
+                            "bb": 0, "k_hitting": 0, "ab": 0,
+                        }
+                    else:
+                        stats = {
+                            "h": int(st.get("hits", 0) or 0),
+                            "r": int(st.get("runs", 0) or 0),
+                            "hr": int(st.get("homeRuns", 0) or 0),
+                            "rbi": int(st.get("rbi", 0) or 0),
+                            "sb": int(st.get("stolenBases", 0) or 0),
+                            "bb": int(st.get("baseOnBalls", 0) or 0),
+                            "k_hitting": int(st.get("strikeOuts", 0) or 0),
+                            "ab": int(st.get("atBats", 0) or 0),
+                            "ip": 0, "k_pitching": 0, "w": 0, "sv": 0,
+                            "er": 0, "ha": 0, "bba": 0,
+                        }
+
+                    logs.append({
+                        "player_id": p["id"],
+                        "game_id": split.get("game", {}).get("gamePk", 0),
+                        "date": game_date,
+                        "team_id": team_info.get("id", p["team_id"]),
+                        "opponent_id": opp.get("id", 0),
+                        "position": p["positions"][0],
+                        "stats": stats,
+                    })
+        except Exception:
+            pass  # Skip players whose logs fail
+        return logs
+
     game_logs = []
-    batch_size = 50
-    for i in range(0, len(active_players), batch_size):
-        batch = active_players[i:i + batch_size]
-        for p in batch:
-            try:
-                # Determine stat group based on position
-                is_pitcher = p["positions"][0] in ("SP", "RP")
-                group = "pitching" if is_pitcher else "hitting"
-                data = _get(f"people/{p['id']}/stats", {
-                    "stats": "gameLog", "group": group, "season": season,
-                })
-                for stat_block in data.get("stats", []):
-                    for split in stat_block.get("splits", []):
-                        game_date = split.get("date", "")
-                        if not (log_start.isoformat() <= game_date <= log_end.isoformat()):
-                            continue
-                        st = split.get("stat", {})
-                        opp = split.get("opponent", {})
-                        team_info = split.get("team", {})
-
-                        if is_pitcher:
-                            stats = {
-                                "ip": float(st.get("inningsPitched", 0) or 0),
-                                "k_pitching": int(st.get("strikeOuts", 0) or 0),
-                                "w": 1 if st.get("wins", 0) else 0,
-                                "sv": 1 if st.get("saves", 0) else 0,
-                                "er": int(st.get("earnedRuns", 0) or 0),
-                                "ha": int(st.get("hits", 0) or 0),
-                                "bba": int(st.get("baseOnBalls", 0) or 0),
-                                "h": 0, "r": 0, "hr": 0, "rbi": 0, "sb": 0,
-                                "bb": 0, "k_hitting": 0, "ab": 0,
-                            }
-                        else:
-                            stats = {
-                                "h": int(st.get("hits", 0) or 0),
-                                "r": int(st.get("runs", 0) or 0),
-                                "hr": int(st.get("homeRuns", 0) or 0),
-                                "rbi": int(st.get("rbi", 0) or 0),
-                                "sb": int(st.get("stolenBases", 0) or 0),
-                                "bb": int(st.get("baseOnBalls", 0) or 0),
-                                "k_hitting": int(st.get("strikeOuts", 0) or 0),
-                                "ab": int(st.get("atBats", 0) or 0),
-                                "ip": 0, "k_pitching": 0, "w": 0, "sv": 0,
-                                "er": 0, "ha": 0, "bba": 0,
-                            }
-
-                        game_logs.append({
-                            "player_id": p["id"],
-                            "game_id": split.get("game", {}).get("gamePk", 0),
-                            "date": game_date,
-                            "team_id": team_info.get("id", p["team_id"]),
-                            "opponent_id": opp.get("id", 0),
-                            "position": p["positions"][0],
-                            "stats": stats,
-                        })
-            except Exception:
-                pass  # Skip players whose logs fail
-        time.sleep(0.15)
-        if (i + batch_size) % 100 == 0:
-            print(f"  ... {min(i + batch_size, len(active_players))}/{len(active_players)} players processed")
+    done = 0
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        futures = {pool.submit(_fetch_player_logs, p): p for p in active_players}
+        for future in as_completed(futures):
+            game_logs.extend(future.result())
+            done += 1
+            if done % 100 == 0:
+                print(f"  ... {done}/{len(active_players)} players processed")
 
     print(f"[MLB] {len(game_logs)} game log rows")
 
