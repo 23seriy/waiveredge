@@ -40,6 +40,7 @@ ok "Backend image built"
 log "Building frontend image..."
 docker build \
   --build-arg NEXT_PUBLIC_API_BASE=http://localhost:8001 \
+  --build-arg NEXT_PUBLIC_AUTH_BASE=https://localhost:8000 \
   -t waiveredge-frontend:local \
   -f frontend/Dockerfile frontend/
 ok "Frontend image built"
