@@ -128,6 +128,15 @@ class InjuryAlert(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class FixtureCache(Base):
+    """Persistent fixture cache — survives container restarts and deploys."""
+    __tablename__ = "fixture_cache"
+    sport: Mapped[str] = mapped_column(String(16), primary_key=True)
+    file_name: Mapped[str] = mapped_column(String(32), primary_key=True)
+    data: Mapped[dict] = mapped_column(JSONB, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class RosterEntry(Base):
     __tablename__ = "rosters"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

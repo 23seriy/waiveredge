@@ -6,6 +6,7 @@ import { ArrowRight, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_BASE || API_BASE;
 
 const SPORT_META: Record<string, { name: string; icon: string; full: string }> = {
   nba: { name: "NBA", icon: "\u{1F3C0}", full: "NBA Basketball" },
@@ -186,7 +187,7 @@ function ConnectContent() {
           </div>
         </div>
         <a
-          href={`${API_BASE}/api/auth/yahoo?sport=${sport}`}
+          href={`${AUTH_BASE}/api/auth/yahoo?sport=${sport}`}
           className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-500 transition-colors"
         >
           Connect with Yahoo <ExternalLink size={14} />
