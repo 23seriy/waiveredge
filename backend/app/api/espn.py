@@ -10,6 +10,7 @@ Flow:
 """
 from __future__ import annotations
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -37,6 +38,15 @@ def espn_teams(league_id: int, season: int = 2026, sport: str = "mlb") -> list[d
     client = ESPNFantasyClient(sport=sport)
     try:
         return client.teams(league_id, season)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            sport_name = sport.upper()
+            raise HTTPException(
+                status_code=404,
+                detail=f"ESPN league {league_id} not found for {sport_name} ({season}). "
+                       f"Make sure this is a {sport_name} league ID, not from another sport.",
+            ) from exc
+        raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
 
@@ -49,6 +59,15 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
     # Verify the league exists by fetching settings.
     try:
         settings = client.settings(req.league_id, req.season)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            sport_name = req.sport.upper()
+            raise HTTPException(
+                status_code=404,
+                detail=f"ESPN league {req.league_id} not found for {sport_name} ({req.season}). "
+                       f"Make sure this is a {sport_name} league ID, not from another sport.",
+            ) from exc
+        raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not fetch ESPN league: {exc}") from exc
 
