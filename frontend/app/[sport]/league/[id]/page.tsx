@@ -143,11 +143,33 @@ function RecCard({ rec, rank, mode, sport, platform, connectionId, onExecuted }:
                    className="flex items-center gap-1 text-xs font-medium text-accent hover:text-accent/80 transition-colors">
                   <ExternalLink size={12} /> Open in ESPN
                 </a>
+              ) : platform === "espn" ? (
+                <button type="button" disabled={executing} onClick={async () => {
+                  setExecuting(true);
+                  try {
+                    const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/execute`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ add_player_id: rec.add_player_id, drop_player_id: rec.drop_player_id }),
+                    });
+                    const data = await res.json();
+                    if (data.deep_link) window.open(data.deep_link, "_blank");
+                    setExecResult(data);
+                  } catch {
+                    setExecResult({ success: false, detail: "Network error — try again." });
+                  } finally {
+                    setExecuting(false);
+                  }
+                }}
+                  className="flex items-center gap-1 rounded-md bg-accent/15 border border-accent/30 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/25 transition-colors disabled:opacity-40">
+                  {executing ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                  {executing ? "Opening…" : "Open in ESPN"}
+                </button>
               ) : (
                 <button type="button" onClick={handleExecute} disabled={executing}
                   className="flex items-center gap-1 rounded-md bg-accent/15 border border-accent/30 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/25 transition-colors disabled:opacity-40">
                   {executing ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-                  {executing ? "Executing…" : platform === "espn" ? "Open in ESPN" : "Execute move"}
+                  {executing ? "Executing…" : "Execute move"}
                 </button>
               )
             )}
