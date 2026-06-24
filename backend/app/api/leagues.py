@@ -7,6 +7,7 @@ Once a user has connected their Yahoo league via OAuth, these endpoints:
 """
 from __future__ import annotations
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -137,11 +138,23 @@ def _sync_espn(conn: LeagueConnection, db: Session) -> dict:
     if not espn_league_id:
         raise HTTPException(status_code=400, detail="Missing ESPN league ID in connection.")
 
-    roster_data = client.roster(espn_league_id, season, team_id) if team_id else []
-    fas = client.free_agents(espn_league_id, season, count=200)
+    try:
+        roster_data = client.roster(espn_league_id, season, team_id) if team_id else []
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail=f"ESPN roster fetch failed ({exc.response.status_code}).") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"ESPN roster fetch failed: {exc}") from exc
+
+    try:
+        fas = client.free_agents(espn_league_id, season, count=200)
+    except Exception:
+        fas = []
 
     sport = _sport_for_league(conn.league_id)
-    fx = load_fixtures(sport)
+    try:
+        fx = load_fixtures(sport)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=f"{sport.upper()} data is not available yet. Please try again later.") from exc
     roster_names = [p["name"] for p in roster_data]
     resolved_ids, unresolved = resolve_names(roster_names, fx["players"])
     fa_names = [p["name"] for p in fas]
@@ -179,15 +192,22 @@ def _sync_yahoo(conn: LeagueConnection, db: Session) -> dict:
     if not team_key:
         raise HTTPException(status_code=400, detail="Could not determine your team in this league.")
 
-    yahoo_roster = yc.roster(team_key)
-    if yc.tokens_refreshed:
-        conn.oauth_tokens = yc.current_tokens
-        db.commit()
+    try:
+        yahoo_roster = yc.roster(team_key)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch roster from Yahoo: {exc}") from exc
+    finally:
+        if yc.tokens_refreshed:
+            conn.oauth_tokens = yc.current_tokens
+            db.commit()
 
     if not yahoo_roster:
         raise HTTPException(status_code=502, detail="Yahoo returned an empty roster.")
 
-    yahoo_fas = yc.free_agents(conn.league_id, max_players=500)
+    try:
+        yahoo_fas = yc.free_agents(conn.league_id, max_players=500)
+    except Exception:
+        yahoo_fas = []
     if yc.tokens_refreshed:
         conn.oauth_tokens = yc.current_tokens
 
