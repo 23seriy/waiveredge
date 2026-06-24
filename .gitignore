@@ -29,6 +29,8 @@ npm-debug.log*
 
 # Local SSL certs (for Yahoo OAuth dev)
 *.pem
+k8s/localhost.crt
+k8s/localhost.key
 
 # Data: the real fixtures are reproducible via scripts/dump_real_fixtures.py
 # (and re-materialized by the app on demand), so keep the JSON out of git.
