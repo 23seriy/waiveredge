@@ -355,13 +355,25 @@ def _execute_yahoo(conn: LeagueConnection, req: ExecuteRequest, db: Session) -> 
 
 
 def _execute_espn_link(conn: LeagueConnection, req: ExecuteRequest) -> dict:
-    """Return a deep link to ESPN's waiver page (no write API available)."""
+    """Return a deep link to the ESPN free-agent page for this league."""
     tokens = conn.oauth_tokens or {}
     espn_league_id = tokens.get("espn_league_id", "")
     sport = _sport_for_league(conn.league_id)
-    game_code = {"nba": "fba", "mlb": "flb", "nfl": "ffl", "nhl": "fhl", "wnba": "wfba"}.get(sport, "fba")
+    espn_sport_path = {
+        "nba": "basketball",
+        "mlb": "baseball",
+        "nfl": "football",
+        "nhl": "hockey",
+        "wnba": "womens-basketball",
+    }.get(sport, "basketball")
     season = tokens.get("season", 2026)
-    url = f"https://fantasy.espn.com/{game_code}/team?leagueId={espn_league_id}&seasonId={season}"
+    team_id = tokens.get("espn_team_id", "")
+    url = (
+        f"https://fantasy.espn.com/{espn_sport_path}/players/add"
+        f"?leagueId={espn_league_id}&seasonId={season}"
+    )
+    if team_id:
+        url += f"&teamId={team_id}"
     return {
         "success": False,
         "platform": "espn",
