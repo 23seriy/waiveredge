@@ -59,6 +59,31 @@ kubectl wait --namespace waiveredge \
   --timeout=120s
 ok "Postgres is ready"
 
+# ---------- 5b. Load backend secrets from .env ----------
+if [ -f backend/.env ]; then
+  log "Loading backend secrets from backend/.env..."
+  # Filter out keys already set in the ConfigMap (they point to K8s-internal hosts).
+  FILTERED_ENV=$(mktemp)
+  grep -v '^\s*#' backend/.env | grep '=' | \
+    grep -iv '^DATABASE_URL=' | \
+    grep -iv '^CORS_ORIGINS=' | \
+    grep -iv '^APP_SECRET=' | \
+    grep -iv '^PORT=' | \
+    grep -iv '^SEASON=' | \
+    grep -iv '^YAHOO_REDIRECT_URI=' \
+    > "$FILTERED_ENV" || true
+  # Override redirect URI for local dev
+  echo "YAHOO_REDIRECT_URI=https://localhost:8000/api/auth/yahoo/callback" >> "$FILTERED_ENV"
+  kubectl delete secret backend-secrets --namespace waiveredge --ignore-not-found
+  kubectl create secret generic backend-secrets \
+    --namespace waiveredge \
+    --from-env-file="$FILTERED_ENV"
+  rm -f "$FILTERED_ENV"
+  ok "Backend secrets loaded"
+else
+  warn "No backend/.env found — Yahoo OAuth and Stripe will be disabled"
+fi
+
 # ---------- 6. Run migrations ----------
 log "Creating migrations ConfigMap..."
 kubectl delete configmap migrations --namespace waiveredge --ignore-not-found

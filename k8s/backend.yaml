@@ -39,6 +39,9 @@ spec:
           envFrom:
             - configMapRef:
                 name: backend-config
+            - secretRef:
+                name: backend-secrets
+                optional: true
           readinessProbe:
             httpGet:
               path: /health
