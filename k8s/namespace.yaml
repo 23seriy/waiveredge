@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: waiveredge
+  labels:
+    app.kubernetes.io/part-of: waiveredge
