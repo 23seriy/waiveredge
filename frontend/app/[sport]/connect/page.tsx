@@ -1,17 +1,18 @@
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { ArrowRight, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowRight, ChevronDown, ExternalLink, Loader2, RotateCcw, Search, Users } from "lucide-react";
 import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_BASE || API_BASE;
+const STORAGE_KEY = "waiveredge.roster.v1";
 
-const SPORT_META: Record<string, { name: string; icon: string; full: string }> = {
-  nba: { name: "NBA", icon: "\u{1F3C0}", full: "NBA Basketball" },
-  mlb: { name: "MLB", icon: "\u26BE", full: "MLB Baseball" },
-  wnba: { name: "WNBA", icon: "\u{1F3C0}", full: "WNBA Basketball" },
+const SPORT_META: Record<string, { name: string; icon: string; full: string; sample: string }> = {
+  nba: { name: "NBA", icon: "\u{1F3C0}", full: "NBA Basketball", sample: "Nikola Jokic\nLuka Doncic\nAnthony Edwards\nJaren Jackson Jr.\nTyrese Haliburton\nBam Adebayo\nJalen Brunson\nTrae Young\nDomantas Sabonis\nScottie Barnes" },
+  mlb: { name: "MLB", icon: "\u26BE", full: "MLB Baseball", sample: "Aaron Judge\nShohei Ohtani\nMookie Betts\nFreddie Freeman\nCorbin Carroll\nJulio Rodriguez\nBobby Witt Jr.\nCorey Seager\nRonald Acuna Jr.\nMatt Olson" },
+  wnba: { name: "WNBA", icon: "\u{1F3C0}", full: "WNBA Basketball", sample: "A'ja Wilson\nBreanna Stewart\nNapheesa Collier\nCaitlin Clark\nAlyssa Thomas\nKelsey Plum\nJewell Loyd\nSabrina Ionescu\nDearica Hamby\nKahleah Copper" },
 };
 
 // Sports where Yahoo Fantasy is not available
@@ -145,11 +146,80 @@ function ESPNConnectForm({ sport }: { sport: string }) {
 }
 
 
+function ManualRosterForm({ sport, sample }: { sport: string; sample: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [rosterText, setRosterText] = useState("");
+
+  function loadSample() {
+    setRosterText(sample);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = rosterText.trim();
+    if (!trimmed) return;
+    localStorage.setItem(`${STORAGE_KEY}.${sport}`, trimmed);
+    router.push(`/${sport}?source=manual`);
+  }
+
+  const rosterCount = rosterText.split("\n").filter((l) => l.trim()).length;
+
+  return (
+    <div className="rounded-xl border border-line/60 bg-card/60 overflow-hidden mb-8">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-surface/30 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Users size={18} className="text-muted" />
+          <div>
+            <p className="text-sm font-semibold">Paste your roster manually</p>
+            <p className="text-xs text-muted">Don&apos;t use Yahoo or ESPN? Enter player names directly.</p>
+          </div>
+        </div>
+        <ChevronDown size={16} className={`text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <form onSubmit={handleSubmit} className="border-t border-line/40 px-6 py-5 animate-fade-in">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-muted tabular-nums">{rosterCount} player{rosterCount !== 1 ? "s" : ""}</span>
+            <button
+              type="button"
+              onClick={loadSample}
+              className="flex items-center gap-1 text-[11px] text-muted hover:text-accent transition-colors"
+            >
+              <RotateCcw size={10} /> Load sample
+            </button>
+          </div>
+          <textarea
+            rows={6}
+            value={rosterText}
+            onChange={(e) => setRosterText(e.target.value)}
+            placeholder={"One player name per line\n\n" + sample.split("\n").slice(0, 3).join("\n") + "\n..."}
+            className="w-full bg-surface/50 border border-line/50 rounded-lg px-4 py-3 text-[13px] font-mono text-gray-200 placeholder:text-muted/30 resize-y focus:outline-none focus:border-accent/40 min-h-[140px]"
+          />
+          <button
+            type="submit"
+            disabled={!rosterText.trim()}
+            className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-sm font-semibold text-bg transition-all hover:brightness-110 hover:shadow-lg hover:shadow-accent/25 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Search size={15} /> Rank waiver adds
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+
 function ConnectContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const sport = params.sport as string;
-  const meta = SPORT_META[sport] || { name: sport.toUpperCase(), icon: "🏅", full: sport.toUpperCase() };
+  const meta = SPORT_META[sport] || { name: sport.toUpperCase(), icon: "🏅", full: sport.toUpperCase(), sample: "" };
   const error = searchParams.get("error");
 
   return (
@@ -232,12 +302,7 @@ function ConnectContent() {
         </div>
       </div>
 
-      <div className="text-center">
-        <p className="text-xs text-muted mb-2">Don&apos;t use Yahoo or ESPN?</p>
-        <Link href={`/${sport}`} className="inline-flex items-center gap-1 text-sm text-accent hover:underline">
-          Paste your roster manually <ArrowRight size={14} />
-        </Link>
-      </div>
+      <ManualRosterForm sport={sport} sample={meta.sample} />
     </main>
   );
 }

@@ -43,8 +43,8 @@ const STEPS = [
   {
     num: 2,
     icon: Link2,
-    title: "Paste roster or sync your league",
-    text: "Drop in player names or connect Yahoo / ESPN for automatic roster import.",
+    title: "Connect your league",
+    text: "Link your Yahoo or ESPN league for automatic roster import, or paste player names manually.",
   },
   {
     num: 3,
@@ -96,7 +96,7 @@ export default function Home() {
             {SPORTS.map((sport, i) => (
               <Link
                 key={sport.key}
-                href={sport.active ? `/${sport.key}` : "#"}
+                href={sport.active ? `/${sport.key}/connect` : "#"}
                 className={`group relative rounded-2xl border p-8 text-center transition-all duration-200 animate-slide-up ${
                   sport.active
                     ? "border-line bg-card hover:border-accent/60 hover:shadow-2xl hover:shadow-accent/10 hover:-translate-y-1 cursor-pointer"
@@ -128,7 +128,7 @@ export default function Home() {
                 <p className="text-[11px] text-muted/60 mb-4">{sport.platforms}</p>
                 {sport.active ? (
                   <span className="inline-flex items-center justify-center gap-2 w-full rounded-lg bg-accent/10 border border-accent/30 px-4 py-2.5 text-sm font-semibold text-accent group-hover:bg-accent group-hover:text-bg transition-all">
-                    Enter {sport.name.split(" ")[0]} <ArrowRight size={14} />
+                    Get Started <ArrowRight size={14} />
                   </span>
                 ) : (
                   <span className="inline-flex items-center justify-center w-full rounded-lg bg-surface/50 px-4 py-2.5 text-sm text-muted">
