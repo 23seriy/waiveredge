@@ -12,7 +12,7 @@ import threading
 import time as _time
 import unicodedata
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -267,13 +267,19 @@ def load_fixtures(sport: str = "nba") -> dict:
             for name in FIXTURE_FILES}
 
 
+def _remaining_window(week_start: str, week_end: str) -> tuple[str, str]:
+    """Use today as window start if we're mid-week, so only remaining games count."""
+    today = date.today().isoformat()
+    return (max(today, week_start), week_end)
+
+
 def build_recommendations(fx: dict, sport: str = "nba") -> list[dict]:
     cfg = fx["roster"]
     sport_cfg = get_sport(sport)
     league = league_from_sport_config({"mode": cfg.get("mode", "points"),
                                        "weights": cfg.get("scoring"),
                                        "categories": cfg.get("categories")}, sport_cfg)
-    window = (cfg["week_start"], cfg["week_end"])
+    window = _remaining_window(cfg["week_start"], cfg["week_end"])
     # Points weights drive fppg + the DvP matchup buckets; per-game projections
     # (used by category mode) are computed regardless of the weights.
     default_weights = dict(sport_cfg.default_points_scoring)
@@ -417,7 +423,7 @@ def manual_recommendations(
     }
 
     return {
-        "week": {"start": league["week_start"], "end": league["week_end"]},
+        "week": {"start": _remaining_window(league["week_start"], league["week_end"])[0], "end": league["week_end"]},
         "scoring_mode": scoring_mode,
         "recommendations": build_recommendations(fx, sport) if roster_entries else [],
         "unresolved": unresolved,
@@ -430,7 +436,7 @@ def sample_recommendations(scoring_mode: str = "points", sport: str = "nba") -> 
     if scoring_mode == "categories":
         fx["roster"]["mode"] = "categories"
     return {
-        "week": {"start": fx["roster"]["week_start"], "end": fx["roster"]["week_end"]},
+        "week": {"start": _remaining_window(fx["roster"]["week_start"], fx["roster"]["week_end"])[0], "end": fx["roster"]["week_end"]},
         "scoring_mode": scoring_mode,
         "recommendations": build_recommendations(fx, sport),
     }
@@ -444,7 +450,7 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
     """
     fx = load_fixtures(sport)
     cfg = fx["roster"]
-    window = (cfg["week_start"], cfg["week_end"])
+    window = _remaining_window(cfg["week_start"], cfg["week_end"])
     sport_cfg = get_sport(sport)
     weights = dict(sport_cfg.default_points_scoring)
 
@@ -509,7 +515,7 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
     ranked.sort(key=lambda r: r["projected_total"], reverse=True)
 
     return {
-        "week": {"start": cfg["week_start"], "end": cfg["week_end"]},
+        "week": {"start": window[0], "end": window[1]},
         "schedule_grid": schedule_grid,
         "streamers": ranked[:top_n],
     }
