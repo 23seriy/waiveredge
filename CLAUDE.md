@@ -5,8 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this product is
 
 WaiverEdge is a fantasy sports "do this now" waiver action list — currently
-supporting **NBA basketball** (live) and **MLB baseball** (architecture ready,
-data pipeline pending). The scoring core fuses **schedule density × DvP matchup ×
+supporting **NBA basketball**, **MLB baseball**, and **WNBA basketball**. The scoring core fuses **schedule density × DvP matchup ×
 injury role-bump × availability** into a single value-over-replacement number per
 candidate, then ranks free agents against *your* roster. The sport registry
 (`app/sports.py`) makes adding new sports config-only. The README's "The model"
@@ -72,13 +71,20 @@ preference (inner is most stable):
      third of the latest available season) — no hardcoded dates. Imported lazily.
    - `balldontlie.py` — optional production feed client (paid ALL-STAR tier
      unlocks injuries → activates the dormant `role_mult` / `avail_prob` signals).
+   - `espn.py` — ESPN Fantasy API client. **Read** via
+     `lm-api-reads.fantasy.espn.com` (roster, free agents, settings).
+     **Write** via `lm-api-writes.fantasy.espn.com` (`add_drop_player`,
+     `claim_waiver`) using `espn_s2` + `SWID` cookies. Game codes:
+     `fba` (NBA), `flb` (MLB), `wfba` (WNBA), `ffl` (NFL), `fhl` (NHL).
+   - `yahoo.py` — Yahoo Fantasy API client (OAuth + league data + transactions).
    - `ingest.py` — loads balldontlie into Postgres or refreshes fixture JSON.
 
 3. **`backend/app/`** — service + API.
    - `recommendations.py` — `load_fixtures()` (lazy-materializes
      `sample_data_nba/*.json` / `sample_data_mlb/*.json` / `sample_data_wnba/*.json`), `build_recommendations(fx, sport)`, `manual_recommendations()`
      (accent-folding name resolver via `_normalize_name` — `Jokić` matches
-     `Jokic`).
+     `Jokic`). Also `build_espn_id_map()` which cross-references ESPN
+     player IDs with fixture IDs for transaction execution.
    - `main.py` — FastAPI: `/health`, `/api/recommendations/sample`,
      `POST /api/recommendations/manual {roster, droppable?}`. The per-user
      `/api/recommendations/{connection_id}` is sketched out in a TODO and depends
@@ -101,6 +107,10 @@ ESPN public API ───────────► wnba_fixtures.build_real_fi
                      backend/sample_data_{nba,mlb,wnba}/*.json (gitignored)
                                   │
                 load_fixtures() ──┴──► build_recommendations ──► rank_waiver_adds ──► API
+
+ESPN write API flow (transactions):
+  connect/sync ─► build_espn_id_map() ─► scoring_json["espn_player_keys"] = {our_id: espn_id}
+  execute      ─► look up espn_id    ─► ESPNFantasyClient.add_drop_player() ─► lm-api-writes
 ```
 
 The same `build_recommendations` is used by the CLI prototype and the API; the
