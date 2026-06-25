@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from ..data.espn import ESPNFantasyClient
 from ..db import get_db
 from ..models import LeagueConnection, RosterEntry, User
-from ..recommendations import load_fixtures, resolve_names
+from ..recommendations import build_espn_id_map, load_fixtures, resolve_names
 
 router = APIRouter(prefix="/api/espn", tags=["espn"])
 
@@ -119,10 +119,13 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
                 LeagueConnection.league_id == espn_league_key)
         .first()
     )
+    # Build ESPN ID ↔ our ID mapping for transaction execution.
+    espn_id_map = build_espn_id_map(roster_data + fas, fx["players"])
     scoring_data = {
         "scoring_type": settings.get("scoring_type", ""),
         "weights": settings.get("weights", {}),
         "free_agent_ids": fa_ids,
+        "espn_player_keys": espn_id_map,
     }
     oauth_tokens = {
         "espn_s2": req.espn_s2,

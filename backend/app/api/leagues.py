@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from ..data.yahoo import YahooFantasyClient
 from ..db import get_db
 from ..models import LeagueConnection, RosterEntry
-from ..recommendations import build_recommendations, load_fixtures, resolve_names
+from ..recommendations import build_espn_id_map, build_recommendations, load_fixtures, resolve_names
 from .paywall import require_pro
 
 router = APIRouter(prefix="/api/leagues", tags=["leagues"])
@@ -160,8 +160,10 @@ def _sync_espn(conn: LeagueConnection, db: Session) -> dict:
     fa_names = [p["name"] for p in fas]
     fa_ids, _ = resolve_names(fa_names, fx["players"])
 
+    espn_id_map = build_espn_id_map(roster_data + fas, fx["players"])
     scoring_data = dict(conn.scoring_json or {})
     scoring_data["free_agent_ids"] = fa_ids
+    scoring_data["espn_player_keys"] = espn_id_map
     conn.scoring_json = scoring_data
 
     db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).delete()
@@ -313,13 +315,13 @@ def execute_transaction(connection_id: int, req: ExecuteRequest, db: Session = D
     """Execute an add/drop transaction on the user's fantasy platform.
 
     Yahoo: submits via the official Transactions API.
-    ESPN: returns a deep link (no write API available).
+    ESPN: submits via the undocumented write API (falls back to deep link).
     """
     require_pro(connection_id, db)
     conn = _get_connection(connection_id, db)
 
     if conn.platform == "espn":
-        return _execute_espn_link(conn, req)
+        return _execute_espn(conn, req)
     if conn.platform == "yahoo":
         return _execute_yahoo(conn, req, db)
     raise HTTPException(status_code=400, detail=f"Unsupported platform: {conn.platform}")
@@ -374,8 +376,8 @@ def _execute_yahoo(conn: LeagueConnection, req: ExecuteRequest, db: Session) -> 
     return {"success": True, "platform": "yahoo", "detail": "Transaction submitted to Yahoo."}
 
 
-def _execute_espn_link(conn: LeagueConnection, req: ExecuteRequest) -> dict:
-    """Return a deep link to the ESPN free-agent page for this league."""
+def _espn_deep_link(conn: LeagueConnection) -> str:
+    """Build a deep link to the ESPN free-agent page for this league."""
     tokens = conn.oauth_tokens or {}
     espn_league_id = tokens.get("espn_league_id", "")
     sport = _sport_for_league(conn.league_id)
@@ -394,9 +396,81 @@ def _execute_espn_link(conn: LeagueConnection, req: ExecuteRequest) -> dict:
     )
     if team_id:
         url += f"&teamId={team_id}"
-    return {
-        "success": False,
-        "platform": "espn",
-        "detail": "ESPN does not support programmatic transactions. Use the link to make this move.",
-        "deep_link": url,
-    }
+    return url
+
+
+def _execute_espn(conn: LeagueConnection, req: ExecuteRequest) -> dict:
+    """Execute an add/drop via ESPN Fantasy API.
+
+    Falls back to a deep link if cookies or ESPN player IDs are missing.
+    """
+    from ..data.espn import ESPNFantasyClient
+
+    tokens = conn.oauth_tokens or {}
+    espn_s2 = tokens.get("espn_s2", "")
+    swid = tokens.get("swid", "")
+    espn_league_id = tokens.get("espn_league_id")
+    team_id = tokens.get("espn_team_id")
+    season = tokens.get("season", 2026)
+
+    # Without cookies we can't write — fall back to deep link.
+    if not espn_s2 or not swid or not espn_league_id or not team_id:
+        return {
+            "success": False, "platform": "espn",
+            "detail": "Missing ESPN credentials. Use the link to make this move.",
+            "deep_link": _espn_deep_link(conn),
+        }
+
+    # Look up ESPN player IDs from stored mapping.
+    scoring_data = conn.scoring_json or {}
+    espn_keys: dict = scoring_data.get("espn_player_keys", {})
+    add_espn_id = espn_keys.get(str(req.add_player_id))
+    if not add_espn_id:
+        return {
+            "success": False, "platform": "espn",
+            "detail": "Add player ESPN ID not found. Sync your roster first, then try again.",
+            "deep_link": _espn_deep_link(conn),
+        }
+
+    drop_espn_id = None
+    if req.drop_player_id:
+        drop_espn_id = espn_keys.get(str(req.drop_player_id))
+        if not drop_espn_id:
+            return {
+                "success": False, "platform": "espn",
+                "detail": "Drop player ESPN ID not found. Sync your roster first, then try again.",
+                "deep_link": _espn_deep_link(conn),
+            }
+
+    sport = _sport_for_league(conn.league_id)
+    client = ESPNFantasyClient(sport=sport, espn_s2=espn_s2, swid=swid)
+
+    try:
+        result = client.add_drop_player(
+            league_id=espn_league_id,
+            season=season,
+            team_id=team_id,
+            add_espn_id=int(add_espn_id),
+            drop_espn_id=int(drop_espn_id) if drop_espn_id else None,
+        )
+    except httpx.HTTPStatusError as exc:
+        error_body = exc.response.text[:300]
+        # ESPN returns 409 for waivers / roster-full situations.
+        if exc.response.status_code == 409:
+            if "waivers" in error_body.lower():
+                raise HTTPException(
+                    status_code=409,
+                    detail="This player is on waivers — submit a waiver claim on ESPN instead.",
+                ) from exc
+            raise HTTPException(
+                status_code=409,
+                detail=f"ESPN rejected the transaction: {error_body}",
+            ) from exc
+        raise HTTPException(
+            status_code=502,
+            detail=f"ESPN transaction failed ({exc.response.status_code}): {error_body}",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"ESPN transaction failed: {exc}") from exc
+
+    return {"success": True, "platform": "espn", "detail": "Transaction executed on ESPN."}

@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 
 ESPN_BASE = "https://lm-api-reads.fantasy.espn.com/apis/v3/games"
+ESPN_WRITES_BASE = "https://lm-api-writes.fantasy.espn.com/apis/v3/games"
 
 GAME_CODES = {
     "nba": "fba",
@@ -178,6 +179,78 @@ class ESPNFantasyClient:
             ]
         except Exception:
             return []
+
+    def _post(self, league_id: int, season: int, endpoint: str, payload: dict) -> dict:
+        """POST to ESPN write API (transactions, lineup changes)."""
+        url = (f"{ESPN_WRITES_BASE}/{self.game_code}"
+               f"/seasons/{season}/segments/0/leagues/{league_id}{endpoint}")
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-Fantasy-Platform": "espn-fantasy-web",
+            "X-Fantasy-Source": "kona",
+        }
+        resp = httpx.post(url, json=payload, cookies=self._cookies,
+                          headers=headers, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+
+    def add_drop_player(
+        self,
+        league_id: int,
+        season: int,
+        team_id: int,
+        add_espn_id: int,
+        drop_espn_id: int | None = None,
+        scoring_period_id: int = 0,
+    ) -> dict:
+        """Add a free agent, optionally dropping a player.
+
+        Requires espn_s2 + SWID cookies for authentication.
+        """
+        swid = self._cookies.get("SWID", "")
+        items = [{"playerId": add_espn_id, "type": "ADD", "toTeamId": team_id}]
+        if drop_espn_id is not None:
+            items.append({"playerId": drop_espn_id, "type": "DROP",
+                          "fromTeamId": team_id})
+        payload = {
+            "isLeagueManager": False,
+            "teamId": team_id,
+            "type": "FREEAGENT",
+            "memberId": swid,
+            "scoringPeriodId": scoring_period_id,
+            "executionType": "EXECUTE",
+            "items": items,
+        }
+        return self._post(league_id, season, "/transactions/", payload)
+
+    def claim_waiver(
+        self,
+        league_id: int,
+        season: int,
+        team_id: int,
+        add_espn_id: int,
+        drop_espn_id: int | None = None,
+        bid_amount: int = 0,
+        scoring_period_id: int = 0,
+    ) -> dict:
+        """Submit a waiver claim with optional FAAB bid."""
+        swid = self._cookies.get("SWID", "")
+        items = [{"playerId": add_espn_id, "type": "ADD", "toTeamId": team_id}]
+        if drop_espn_id is not None:
+            items.append({"playerId": drop_espn_id, "type": "DROP",
+                          "fromTeamId": team_id})
+        payload = {
+            "isLeagueManager": False,
+            "teamId": team_id,
+            "type": "WAIVER",
+            "memberId": swid,
+            "scoringPeriodId": scoring_period_id,
+            "executionType": "EXECUTE",
+            "items": items,
+            "bidAmount": bid_amount,
+        }
+        return self._post(league_id, season, "/transactions/", payload)
 
     def my_team_id(self, league_id: int, season: int) -> int | None:
         """Find the authenticated user's team ID (requires cookies)."""
