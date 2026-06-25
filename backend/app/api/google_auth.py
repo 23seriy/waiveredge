@@ -1,12 +1,13 @@
-"""Google OAuth 2.0 authentication + signed session cookie.
+"""Google OAuth 2.0 authentication + HMAC-signed Bearer token.
 
 Flow:
 1. Frontend links to GET /api/auth/google → redirect to Google consent screen.
 2. Google redirects back to GET /api/auth/google/callback?code=... .
 3. We exchange the code for tokens, decode the id_token for profile info,
-   upsert a User row, set a signed session cookie, and redirect to the frontend.
-4. GET /api/auth/me returns the current user from the cookie.
-5. POST /api/auth/logout clears the cookie.
+   upsert a User row, and redirect to the frontend with ?token=... .
+4. Frontend stores the token in localStorage and sends it as Authorization: Bearer.
+5. GET /api/auth/me returns the current user from the Bearer token.
+6. POST /api/auth/logout is a no-op (frontend clears localStorage).
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ import time
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -31,11 +32,10 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
-COOKIE_NAME = "we_session"
-COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days
+TOKEN_MAX_AGE = 30 * 24 * 3600  # 30 days
 
 
-# --- Session cookie helpers (HMAC-signed JSON) ---
+# --- HMAC-signed token helpers ---
 
 def _sign(payload: str) -> str:
     sig = hmac.new(settings.app_secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
@@ -59,19 +59,27 @@ def _verify(token: str) -> dict | None:
     return data
 
 
-def _make_session_cookie(user: User) -> str:
+def _make_token(user: User) -> str:
     payload = json.dumps({
         "uid": user.id,
-        "exp": int(time.time()) + COOKIE_MAX_AGE,
+        "exp": int(time.time()) + TOKEN_MAX_AGE,
     })
     return _sign(payload)
 
 
-def get_current_user(we_session: str | None = Cookie(None), db: Session = Depends(get_db)) -> User | None:
+def _get_bearer_token(request: Request) -> str | None:
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer "):
+        return auth[7:]
+    return None
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User | None:
     """FastAPI dependency: returns the logged-in User or None."""
-    if not we_session:
+    token = _get_bearer_token(request)
+    if not token:
         return None
-    data = _verify(we_session)
+    data = _verify(token)
     if not data:
         return None
     return db.query(User).filter(User.id == data["uid"]).first()
@@ -159,19 +167,9 @@ def google_callback(code: str = Query(...), db: Session = Depends(get_db)):
     db.flush()
     db.commit()
 
-    # Set session cookie and redirect to frontend.
-    cookie = _make_session_cookie(user)
-    response = RedirectResponse(f"{settings.frontend_url}/")
-    response.set_cookie(
-        COOKIE_NAME,
-        cookie,
-        max_age=COOKIE_MAX_AGE,
-        httponly=True,
-        samesite="lax",
-        secure=settings.frontend_url.startswith("https"),
-        path="/",
-    )
-    return response
+    # Generate token and redirect to frontend with it in the URL.
+    token = _make_token(user)
+    return RedirectResponse(f"{settings.frontend_url}/auth/callback?token={token}")
 
 
 @router.get("/me")
@@ -192,7 +190,5 @@ def me(user: User | None = Depends(get_current_user)):
 
 @router.post("/logout")
 def logout():
-    """Clear the session cookie."""
-    response = Response(content='{"ok": true}', media_type="application/json")
-    response.delete_cookie(COOKIE_NAME, path="/")
-    return response
+    """No-op — frontend clears localStorage."""
+    return {"ok": True}

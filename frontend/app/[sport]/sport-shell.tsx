@@ -55,8 +55,8 @@ function UserMenu() {
           <button
             type="button"
             onClick={() => {
-              fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" })
-                .then(() => window.location.reload());
+              localStorage.removeItem("we_token");
+              window.location.reload();
             }}
             className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-muted hover:text-gray-200 hover:bg-surface transition-colors"
           >
