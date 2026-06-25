@@ -114,12 +114,13 @@ export default function Home() {
               >
                 Get started free <ArrowRight size={16} />
               </button>
-              <Link
-                href="/mlb/streamers"
+              <button
+                type="button"
+                onClick={scrollToSports}
                 className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
               >
                 <Flame size={14} /> Browse free streamers
-              </Link>
+              </button>
             </div>
             <p className="text-xs text-muted/70 animate-fade-in" style={{ animationDelay: "0.35s" }}>
               No sign-up required &middot; Works with Yahoo &amp; ESPN
