@@ -327,6 +327,31 @@ def _normalize_name(name: str) -> str:
     return " ".join("".join(out).split())
 
 
+def build_espn_id_map(
+    espn_players: list[dict], fixture_players: list[dict],
+) -> dict[str, str]:
+    """Map our internal player IDs to ESPN player IDs using name matching.
+
+    ``espn_players`` are dicts with at least "name" and "espn_id" keys
+    (from ESPNFantasyClient.roster / free_agents).
+    Returns {str(our_id): str(espn_id)} for all matched players.
+    """
+    fixture_index: dict[str, int] = {
+        _normalize_name(p["name"]): p["id"] for p in fixture_players
+    }
+    result: dict[str, str] = {}
+    for ep in espn_players:
+        espn_id = ep.get("espn_id")
+        name = ep.get("name", "")
+        if not espn_id or not name:
+            continue
+        key = _normalize_name(name)
+        our_id = fixture_index.get(key)
+        if our_id is not None:
+            result[str(our_id)] = str(espn_id)
+    return result
+
+
 def resolve_names(names: list[str], players: list[dict]) -> tuple[list[int], list[str]]:
     """Map user-typed names to player ids. Returns (resolved_ids, unresolved_names).
 

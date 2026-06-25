@@ -1,23 +1,155 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Flame, LayoutDashboard, Zap } from "lucide-react";
+import { ChevronDown, Flame, LayoutDashboard, LogOut, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 
-const SPORT_META: Record<string, { name: string; icon: string }> = {
-  nba: { name: "NBA", icon: "\u{1F3C0}" },
-  mlb: { name: "MLB", icon: "\u26BE" },
-  wnba: { name: "WNBA", icon: "\u{1F3C0}" },
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
+type AuthUser = { id: number; email: string; name: string | null; picture: string | null; tier: string };
+
+function UserMenu() {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/auth/me`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { setUser(d.user ?? null); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  if (!loaded) return null;
+
+  if (!user) {
+    return (
+      <Link
+        href="/signin"
+        className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-sm shadow-accent/20"
+      >
+        Get Started
+      </Link>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(!open)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+        {user.picture ? (
+          <img src={user.picture} alt="" className="h-7 w-7 rounded-full border border-line" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="h-7 w-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-accent">
+            {(user.name || user.email)[0].toUpperCase()}
+          </div>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-line bg-card shadow-2xl shadow-black/40 overflow-hidden z-50 animate-fade-in">
+          <div className="px-4 py-3 border-b border-line/50">
+            <p className="text-sm font-medium truncate">{user.name || "User"}</p>
+            <p className="text-xs text-muted truncate">{user.email}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" })
+                .then(() => window.location.reload());
+            }}
+            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-muted hover:text-gray-200 hover:bg-surface transition-colors"
+          >
+            <LogOut size={14} /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const SPORT_META: Record<string, { name: string; icon: string; active: boolean }> = {
+  mlb: { name: "MLB", icon: "\u26BE", active: true },
+  wnba: { name: "WNBA", icon: "\u{1F3C0}", active: true },
+  nba: { name: "NBA", icon: "\u{1F3C0}", active: false },
 };
 
 const VALID_SPORTS = new Set(["nba", "mlb", "wnba"]);
+
+function SportSwitcher({ currentSport, pathname }: { currentSport: string; pathname: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = SPORT_META[currentSport];
+
+  // Preserve sub-path when switching sports (e.g. /mlb/streamers → /wnba/streamers)
+  const subPath = pathname.replace(`/${currentSport}`, "") || "";
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 text-xs bg-accent/10 text-accent border border-accent/30 rounded-full px-2.5 py-1 font-semibold hover:bg-accent/20 transition-colors"
+      >
+        {current.icon} {current.name}
+        <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-1.5 w-44 rounded-xl border border-line bg-card shadow-2xl shadow-black/40 overflow-hidden z-50 animate-fade-in">
+          <div className="px-3 py-2 border-b border-line/50">
+            <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">Switch sport</p>
+          </div>
+          {Object.entries(SPORT_META).map(([key, meta]) => (
+            <Link
+              key={key}
+              href={meta.active ? `/${key}${subPath}` : "#"}
+              onClick={() => setOpen(false)}
+              className={`flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
+                key === currentSport
+                  ? "bg-accent/10 text-accent font-semibold"
+                  : meta.active
+                    ? "text-gray-200 hover:bg-surface"
+                    : "text-muted/50 cursor-not-allowed pointer-events-none"
+              }`}
+            >
+              <span className="text-lg">{meta.icon}</span>
+              <span className="flex-1">{meta.name}</span>
+              {key === currentSport && (
+                <span className="text-[10px] bg-accent/20 text-accent rounded-full px-1.5 py-0.5 font-bold">Active</span>
+              )}
+              {!meta.active && (
+                <span className="text-[10px] bg-surface text-muted rounded-full px-1.5 py-0.5">Off</span>
+              )}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SportShell({ children }: { children: ReactNode }) {
   const params = useParams();
   const pathname = usePathname();
   const sport = params.sport as string;
-  const meta = SPORT_META[sport];
   const onStreamers = pathname.endsWith("/streamers");
   const onConnect = pathname.endsWith("/connect");
   const onDashboard = pathname === `/${sport}`;
@@ -40,7 +172,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-bg flex flex-col">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
@@ -48,9 +180,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
               </div>
               <span className="text-lg font-bold tracking-tight hidden sm:inline">WaiverEdge</span>
             </Link>
-            <span className="text-xs bg-accent/10 text-accent border border-accent/30 rounded-full px-2.5 py-1 font-semibold">
-              {meta.icon} {meta.name}
-            </span>
+            <SportSwitcher currentSport={sport} pathname={pathname} />
           </div>
           <nav className="flex items-center gap-1">
             {onStreamers || onConnect ? (
@@ -75,6 +205,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
             <Link href="/pricing" className="text-sm px-3 py-1.5 rounded-lg text-muted hover:text-gray-200 hover:bg-surface transition-colors">
               Pricing
             </Link>
+            <UserMenu />
           </nav>
         </div>
       </header>
@@ -82,7 +213,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
       <div className="flex-1">{children}</div>
 
       <footer className="border-t border-line/50 bg-card/30 mt-16">
-        <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2 text-muted hover:text-gray-300 transition-colors">
               <div className="h-5 w-5 rounded bg-accent/70 flex items-center justify-center">

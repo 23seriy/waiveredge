@@ -272,7 +272,7 @@ export default function StreamersPage() {
   }, [sport]);
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8">
+    <main className="mx-auto px-6 md:px-12 lg:px-20 py-8">
       <div className="mb-8 animate-fade-in">
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-3 flex items-center gap-2.5">
           <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center">

@@ -12,7 +12,7 @@ uvicorn app.main:app --reload          # http://localhost:8000
 # Frontend
 cd frontend && npm run dev             # http://localhost:3000
 
-# Unit tests (96 currently)
+# Unit tests (110 currently)
 python -m pytest tests/ -v
 ```
 
@@ -142,6 +142,11 @@ python -m pytest tests/ -v
 | 61 | Unresolved shown | After sync with missing players | Orange banner listing unmatched names | |
 | 62 | Recommendations | After sync | Personalized rec cards appear | |
 | 63 | Scoring detection | If Yahoo league is H2H-cats/roto | Category badge in header, z-score cards | |
+| 64a | ESPN execute — success | Click "Execute move" on ESPN rec (MLB/WNBA/NBA) | Spinner → "Done!" checkmark | |
+| 64b | ESPN execute — missing creds | ESPN league without espn_s2/SWID | Deep link opens in new tab, "Open in ESPN" link shown | |
+| 64c | ESPN execute — missing player key | Click execute before sync | Error: "Sync your roster first" with deep link fallback | |
+| 64d | ESPN execute — waiver player | Click execute on a waiver-locked player | 409 error: "This player is on waivers" | |
+| 64e | Yahoo execute | Click "Execute move" on Yahoo rec | Spinner → "Done!" checkmark | |
 
 ### 2.7 Responsive / Cross-cutting
 | # | Test | How | Expected | Status |
@@ -169,7 +174,8 @@ cd backend && python -m pytest tests/ -v
 | `test_recommendations.py` | 7 | Service layer (build_recs, top_streamers) |
 | `test_scoring.py` | 10 | Core engine integration |
 | `test_scoring_systems.py` | 18 | LeagueScoring, sport config, fantasy_points, WNBA |
-| **Total** | **96** | |
+| `test_espn_transactions.py` | 14 | ESPN ID mapping, write API payloads, URL construction |
+| **Total** | **110** | |
 
 ---
 
@@ -179,3 +185,4 @@ cd backend && python -m pytest tests/ -v
 |---|---|
 | 2026-06-17 | Initial plan — 60 manual checks + 46 automated tests |
 | 2026-06-21 | Updated for sport-scoped routes, 87 automated tests, unresolved player display |
+| 2026-06-24 | Added ESPN execute test cases (64a–64e), ESPN transaction test suite (14 tests), updated total to 110 |

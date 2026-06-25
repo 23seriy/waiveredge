@@ -1,51 +1,55 @@
 import Link from "next/link";
-import { ArrowRight, Calendar, Flame, Shield, TrendingUp, Zap } from "lucide-react";
+import { ArrowRight, ChartNoAxesCombined, Link2, ListChecks, Shield, Zap } from "lucide-react";
 
 const SPORTS = [
   {
     key: "mlb",
     name: "MLB Baseball",
     icon: "\u26BE",
-    description: "H2H Points & 5x5 leagues",
+    description: "H2H Points & 5×5 category leagues",
+    platforms: "Yahoo & ESPN",
+    features: ["Points", "5×5 Cats", "Streamers"],
     active: true,
-    note: "In-season",
   },
   {
     key: "wnba",
     name: "WNBA Basketball",
     icon: "\u{1F3C0}",
-    description: "H2H Points leagues \u2014 ESPN only",
+    description: "H2H Points leagues on ESPN",
+    platforms: "ESPN",
+    features: ["Points", "Streamers"],
     active: true,
-    note: "In-season",
   },
   {
     key: "nba",
     name: "NBA Basketball",
     icon: "\u{1F3C0}",
     description: "H2H Points & 9-Cat leagues",
+    platforms: "Yahoo & ESPN",
+    features: ["Points", "9-Cat", "Streamers"],
     active: false,
-    note: "Offseason \u2014 returns Oct 2026",
+    note: "Returns Oct 2026",
   },
 ];
 
-const VALUE_PROPS = [
+const STEPS = [
   {
-    icon: Calendar,
-    title: "Schedule Density",
-    text: "We rank players with the most games this week so you squeeze every counting stat.",
-    color: "text-accent",
+    num: 1,
+    icon: ListChecks,
+    title: "Pick your sport",
+    text: "Choose MLB, WNBA, or NBA. You can switch anytime from the header.",
   },
   {
-    icon: TrendingUp,
-    title: "Matchup Quality",
-    text: "Soft opponents inflate projections. We surface the easiest paths to fantasy points.",
-    color: "text-pos",
+    num: 2,
+    icon: Link2,
+    title: "Paste roster or sync your league",
+    text: "Drop in player names or connect Yahoo / ESPN for automatic roster import.",
   },
   {
-    icon: Shield,
-    title: "Read-Only & Secure",
-    text: "We never modify your roster. View-only access with no passwords stored.",
-    color: "text-accent",
+    num: 3,
+    icon: ChartNoAxesCombined,
+    title: "Get ranked recommendations",
+    text: "We crunch schedule density, matchups, and recent form — then rank who to add and who to drop.",
   },
 ];
 
@@ -53,7 +57,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-bg">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
               <Zap size={18} className="text-bg" />
@@ -61,21 +65,24 @@ export default function Home() {
             <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
           </div>
           <nav className="flex items-center gap-5">
-            <Link href="/mlb/streamers" className="hidden sm:flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">
-              <Flame size={14} /> Streamers
-            </Link>
             <Link href="/pricing" className="text-sm text-muted hover:text-accent transition-colors">
               Pricing
+            </Link>
+            <Link
+              href="/signin"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-sm shadow-accent/20"
+            >
+              Get Started
             </Link>
           </nav>
         </div>
       </header>
 
       <main>
-        {/* Hero */}
+        {/* Hero + Sport Picker — one unified section */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(240,136,62,0.08)_0%,_transparent_60%)] pointer-events-none" />
-          <div className="max-w-3xl mx-auto px-4 pt-20 pb-16 md:pt-28 md:pb-20 text-center relative">
+          <div className="mx-auto px-6 md:px-12 lg:px-20 pt-16 pb-6 md:pt-24 md:pb-8 text-center relative">
             <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-4 py-1.5 text-xs font-medium text-accent mb-6 animate-fade-in">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-pos opacity-75 animate-ping" />
@@ -84,56 +91,41 @@ export default function Home() {
               MLB &amp; WNBA in-season now
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-5 text-balance animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 text-balance animate-fade-in" style={{ animationDelay: "0.1s" }}>
               Know exactly who to pick up{" "}
               <span className="text-accent">for your roster</span>
             </h1>
-            <p className="text-muted text-base md:text-lg max-w-xl mx-auto mb-10 leading-relaxed animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            <p className="text-muted text-base md:text-lg max-w-xl mx-auto mb-3 leading-relaxed animate-fade-in" style={{ animationDelay: "0.2s" }}>
               WaiverEdge fuses schedule density, matchups, and recent form into one
               ranked action list — the waiver move-finder for fantasy managers.
             </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-              <Link
-                href="/mlb"
-                className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-lg shadow-accent/20"
-              >
-                Get started free <ArrowRight size={16} />
-              </Link>
-              <Link
-                href="/mlb/streamers"
-                className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
-              >
-                <Flame size={14} /> Browse free streamers
-              </Link>
-            </div>
-            <p className="text-xs text-muted/70 animate-fade-in" style={{ animationDelay: "0.35s" }}>
+            <p className="text-xs text-muted/70 mb-2 animate-fade-in" style={{ animationDelay: "0.25s" }}>
               No sign-up required &middot; Works with Yahoo &amp; ESPN
             </p>
           </div>
         </section>
 
-        {/* Sport cards */}
-        <section className="max-w-3xl mx-auto px-4 pb-16">
-          <h2 className="text-xs font-semibold text-muted uppercase tracking-widest text-center mb-6">
-            Choose your sport
+        {/* Sport picker — directly below hero with no gap */}
+        <section className="mx-auto px-6 md:px-12 lg:px-20 pb-16">
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-widest text-center mb-6 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            Pick your sport to get started
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
             {SPORTS.map((sport, i) => (
               <Link
                 key={sport.key}
                 href={sport.active ? `/${sport.key}` : "#"}
-                className={`group relative rounded-xl border p-6 text-center transition-all duration-200 animate-slide-up ${
+                className={`group relative rounded-2xl border p-8 text-center transition-all duration-200 animate-slide-up ${
                   sport.active
-                    ? "border-line bg-card hover:border-accent/60 hover:shadow-xl hover:shadow-accent/5 hover:-translate-y-0.5 cursor-pointer"
-                    : "border-line/50 bg-card/40 opacity-50 cursor-not-allowed pointer-events-none"
+                    ? "border-line bg-card hover:border-accent/60 hover:shadow-2xl hover:shadow-accent/10 hover:-translate-y-1 cursor-pointer"
+                    : "border-line/40 bg-card/30 opacity-40 cursor-not-allowed pointer-events-none"
                 }`}
-                style={{ animationDelay: `${0.1 * i}s` }}
+                style={{ animationDelay: `${0.3 + 0.1 * i}s` }}
               >
-                <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform duration-200">{sport.icon}</span>
-                <h3 className="text-lg font-bold mb-1 flex items-center justify-center gap-2">
-                  {sport.name}
+                <span className="text-5xl block mb-4 group-hover:scale-110 transition-transform duration-200">{sport.icon}</span>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h3 className="text-lg font-bold">{sport.name}</h3>
                   {sport.active ? (
                     <span className="text-[10px] uppercase tracking-wider font-bold bg-pos/15 text-pos rounded-full px-2 py-0.5">
                       Live
@@ -143,36 +135,48 @@ export default function Home() {
                       Off
                     </span>
                   )}
-                </h3>
+                </div>
                 <p className="text-sm text-muted mb-3">{sport.description}</p>
-                {sport.active && (
-                  <span className="inline-flex items-center gap-1 text-sm text-accent font-medium group-hover:gap-2 transition-all">
-                    Enter <ArrowRight size={14} />
+                <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+                  {sport.features.map((f) => (
+                    <span key={f} className="text-[11px] font-medium bg-surface text-muted rounded-md px-2 py-0.5 border border-line/50">
+                      {f}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted/60 mb-4">{sport.platforms}</p>
+                {sport.active ? (
+                  <span className="inline-flex items-center justify-center gap-2 w-full rounded-lg bg-accent/10 border border-accent/30 px-4 py-2.5 text-sm font-semibold text-accent group-hover:bg-accent group-hover:text-bg transition-all">
+                    Enter {sport.name.split(" ")[0]} <ArrowRight size={14} />
                   </span>
-                )}
-                {!sport.active && (
-                  <span className="text-xs text-muted">{sport.note}</span>
+                ) : (
+                  <span className="inline-flex items-center justify-center w-full rounded-lg bg-surface/50 px-4 py-2.5 text-sm text-muted">
+                    {sport.note}
+                  </span>
                 )}
               </Link>
             ))}
           </div>
         </section>
 
-        {/* Value props */}
+        {/* Getting started steps */}
         <section className="border-t border-line/50 bg-surface/30">
-          <div className="max-w-4xl mx-auto px-4 py-16">
-            <h2 className="text-xl font-bold text-center mb-2">How it works</h2>
+          <div className="mx-auto px-6 md:px-12 lg:px-20 py-16">
+            <h2 className="text-xl font-bold text-center mb-2">Getting Started</h2>
             <p className="text-sm text-muted text-center mb-10 max-w-md mx-auto">
-              Paste your roster or connect your league. We do the math in seconds.
+              Three steps to smarter waiver moves. No account required.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {VALUE_PROPS.map((vp) => (
-                <div key={vp.title} className="rounded-xl border border-line bg-card p-5 hover:border-line/80 transition-colors">
-                  <div className={`h-10 w-10 rounded-lg bg-surface flex items-center justify-center mb-4 ${vp.color}`}>
-                    <vp.icon size={20} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              {STEPS.map((step) => (
+                <div key={step.num} className="relative text-center">
+                  <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-accent/10 border border-accent/20 mb-5">
+                    <step.icon size={24} className="text-accent" />
                   </div>
-                  <h3 className="text-sm font-semibold mb-1.5">{vp.title}</h3>
-                  <p className="text-xs text-muted leading-relaxed">{vp.text}</p>
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-accent text-bg text-xs font-bold flex items-center justify-center shadow-lg shadow-accent/30">
+                    {step.num}
+                  </div>
+                  <h3 className="text-sm font-semibold mb-2">{step.title}</h3>
+                  <p className="text-xs text-muted leading-relaxed">{step.text}</p>
                 </div>
               ))}
             </div>
@@ -181,7 +185,7 @@ export default function Home() {
 
         {/* Trust bar */}
         <section className="border-t border-line/50">
-          <div className="max-w-3xl mx-auto px-4 py-10 text-center">
+          <div className="mx-auto px-6 md:px-12 lg:px-20 py-10 text-center">
             <div className="inline-flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted">
               <span className="flex items-center gap-1.5"><Shield size={14} className="text-accent" /> Read-only access</span>
               <span className="text-line hidden sm:inline">|</span>
@@ -196,7 +200,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-line/50 bg-card/40">
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded bg-accent/80 flex items-center justify-center">
@@ -207,7 +211,6 @@ export default function Home() {
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted">
               <Link href="/mlb" className="hover:text-accent transition-colors">MLB</Link>
               <Link href="/wnba" className="hover:text-accent transition-colors">WNBA</Link>
-              <Link href="/mlb/streamers" className="hover:text-accent transition-colors">Streamers</Link>
               <Link href="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
             </div>
           </div>
