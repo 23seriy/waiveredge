@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Calendar, Flame, Shield, TrendingUp, Zap } from "lucide-react";
+import { ArrowRight, ChartNoAxesCombined, Link2, ListChecks, Shield, Zap } from "lucide-react";
 
 const SPORTS = [
   {
@@ -32,24 +32,24 @@ const SPORTS = [
   },
 ];
 
-const VALUE_PROPS = [
+const STEPS = [
   {
-    icon: Calendar,
-    title: "Schedule Density",
-    text: "We rank players with the most games this week so you squeeze every counting stat.",
-    color: "text-accent",
+    num: 1,
+    icon: ListChecks,
+    title: "Pick your sport",
+    text: "Choose MLB, WNBA, or NBA. You can switch anytime from the header.",
   },
   {
-    icon: TrendingUp,
-    title: "Matchup Quality",
-    text: "Soft opponents inflate projections. We surface the easiest paths to fantasy points.",
-    color: "text-pos",
+    num: 2,
+    icon: Link2,
+    title: "Paste roster or sync your league",
+    text: "Drop in player names or connect Yahoo / ESPN for automatic roster import.",
   },
   {
-    icon: Shield,
-    title: "Read-Only & Secure",
-    text: "We never modify your roster. View-only access with no passwords stored.",
-    color: "text-accent",
+    num: 3,
+    icon: ChartNoAxesCombined,
+    title: "Get ranked recommendations",
+    text: "We crunch schedule density, matchups, and recent form — then rank who to add and who to drop.",
   },
 ];
 
@@ -65,9 +65,6 @@ export default function Home() {
             <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
           </div>
           <nav className="flex items-center gap-5">
-            <Link href="/mlb/streamers" className="hidden sm:flex items-center gap-1 text-sm text-muted hover:text-accent transition-colors">
-              <Flame size={14} /> Streamers
-            </Link>
             <Link href="/pricing" className="text-sm text-muted hover:text-accent transition-colors">
               Pricing
             </Link>
@@ -156,21 +153,24 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Value props */}
+        {/* Getting started steps */}
         <section className="border-t border-line/50 bg-surface/30">
           <div className="mx-auto px-6 md:px-12 lg:px-20 py-16">
-            <h2 className="text-xl font-bold text-center mb-2">How it works</h2>
+            <h2 className="text-xl font-bold text-center mb-2">Getting Started</h2>
             <p className="text-sm text-muted text-center mb-10 max-w-md mx-auto">
-              Paste your roster or connect your league. We do the math in seconds.
+              Three steps to smarter waiver moves. No account required.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {VALUE_PROPS.map((vp) => (
-                <div key={vp.title} className="rounded-xl border border-line bg-card p-5 hover:border-line/80 transition-colors">
-                  <div className={`h-10 w-10 rounded-lg bg-surface flex items-center justify-center mb-4 ${vp.color}`}>
-                    <vp.icon size={20} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              {STEPS.map((step) => (
+                <div key={step.num} className="relative text-center">
+                  <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-accent/10 border border-accent/20 mb-5">
+                    <step.icon size={24} className="text-accent" />
                   </div>
-                  <h3 className="text-sm font-semibold mb-1.5">{vp.title}</h3>
-                  <p className="text-xs text-muted leading-relaxed">{vp.text}</p>
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-accent text-bg text-xs font-bold flex items-center justify-center shadow-lg shadow-accent/30">
+                    {step.num}
+                  </div>
+                  <h3 className="text-sm font-semibold mb-2">{step.title}</h3>
+                  <p className="text-xs text-muted leading-relaxed">{step.text}</p>
                 </div>
               ))}
             </div>
@@ -205,7 +205,6 @@ export default function Home() {
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted">
               <Link href="/mlb" className="hover:text-accent transition-colors">MLB</Link>
               <Link href="/wnba" className="hover:text-accent transition-colors">WNBA</Link>
-              <Link href="/mlb/streamers" className="hover:text-accent transition-colors">Streamers</Link>
               <Link href="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
             </div>
           </div>
