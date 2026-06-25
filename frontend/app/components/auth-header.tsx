@@ -5,18 +5,41 @@ import Link from "next/link";
 import { LogOut, Zap } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const TOKEN_KEY = "we_token";
 
 type AuthUser = { id: number; email: string; name: string | null; picture: string | null; tier: string };
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export function useAuthUser() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/auth/me`, { credentials: "include" })
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setLoaded(true);
+      return;
+    }
+    fetch(`${API_BASE}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((r) => r.json())
-      .then((d) => { setUser(d.user ?? null); setLoaded(true); })
-      .catch(() => setLoaded(true));
+      .then((d) => {
+        if (d.user) {
+          setUser(d.user);
+        } else {
+          localStorage.removeItem(TOKEN_KEY);
+        }
+        setLoaded(true);
+      })
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
+        setLoaded(true);
+      });
   }, []);
 
   return { user, loaded };
@@ -54,8 +77,8 @@ function UserMenu({ user }: { user: AuthUser }) {
           <button
             type="button"
             onClick={() => {
-              fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" })
-                .then(() => window.location.reload());
+              localStorage.removeItem(TOKEN_KEY);
+              window.location.reload();
             }}
             className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-muted hover:text-gray-200 hover:bg-surface transition-colors"
           >
