@@ -82,6 +82,38 @@ def _get_connection(connection_id: int, db: Session) -> LeagueConnection:
     return conn
 
 
+@router.get("")
+def list_leagues(ids: str = "", db: Session = Depends(get_db)) -> list[dict]:
+    """Return basic info for a list of connection IDs (comma-separated).
+
+    The frontend stores connection IDs in localStorage and passes them here
+    to display the user's connected leagues on the connect page.
+    """
+    if not ids.strip():
+        return []
+    try:
+        id_list = [int(x.strip()) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        return []
+    if not id_list:
+        return []
+    conns = db.query(LeagueConnection).filter(LeagueConnection.id.in_(id_list)).all()
+    result = []
+    for conn in conns:
+        sport = _sport_for_league(conn.league_id)
+        roster_count = db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).count()
+        result.append({
+            "id": conn.id,
+            "platform": conn.platform,
+            "league_id": conn.league_id,
+            "team_key": conn.team_key,
+            "sport": sport,
+            "roster_count": roster_count,
+            "created_at": conn.created_at.isoformat() if conn.created_at else None,
+        })
+    return result
+
+
 @router.get("/{connection_id}")
 def get_league(connection_id: int, db: Session = Depends(get_db)) -> dict:
     """Return league connection info and the stored roster."""

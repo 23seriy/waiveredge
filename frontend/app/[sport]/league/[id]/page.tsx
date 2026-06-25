@@ -52,6 +52,17 @@ type RecsPayload = {
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const LEAGUES_KEY = "waiveredge.leagues.v1";
+
+function saveLeagueId(sport: string, id: number) {
+  try {
+    const raw = localStorage.getItem(`${LEAGUES_KEY}.${sport}`);
+    const ids: number[] = raw ? JSON.parse(raw) : [];
+    if (!ids.includes(id)) {
+      localStorage.setItem(`${LEAGUES_KEY}.${sport}`, JSON.stringify([...ids, id]));
+    }
+  } catch { /* localStorage unavailable */ }
+}
 const CAT_LABELS: Record<string, string> = {
   fg_pct: "FG%", ft_pct: "FT%", fg3m: "3PM", pts: "PTS", reb: "REB",
   ast: "AST", stl: "STL", blk: "BLK", turnover: "TO",
@@ -216,6 +227,11 @@ export default function LeaguePage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  useEffect(() => {
+    const id = parseInt(connectionId, 10);
+    if (!isNaN(id)) saveLeagueId(sport, id);
+  }, [connectionId, sport]);
+
   async function syncRoster() {
     setSyncing(true);
     setUnresolved([]);
@@ -269,9 +285,14 @@ export default function LeaguePage() {
               <h1 className="text-xl font-bold tracking-tight">Your League</h1>
               <p className="text-xs text-muted mt-0.5">{league.platform.toUpperCase()} · {league.league_id}{league.roster.length > 0 && ` · ${league.roster.length} players`}</p>
             </div>
-            <button onClick={syncRoster} disabled={syncing} className="flex items-center gap-1.5 rounded-lg bg-surface border border-line px-3 py-1.5 text-sm text-muted hover:text-accent hover:border-accent/40 transition-colors disabled:opacity-40">
-              <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : "Sync roster"}
-            </button>
+            <div className="flex items-center gap-2">
+              <Link href={`/${sport}/connect`} className="flex items-center gap-1.5 rounded-lg bg-surface border border-line px-3 py-1.5 text-sm text-muted hover:text-accent hover:border-accent/40 transition-colors">
+                + Add league
+              </Link>
+              <button onClick={syncRoster} disabled={syncing} className="flex items-center gap-1.5 rounded-lg bg-surface border border-line px-3 py-1.5 text-sm text-muted hover:text-accent hover:border-accent/40 transition-colors disabled:opacity-40">
+                <RefreshCw size={14} className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : "Sync roster"}
+              </button>
+            </div>
           </div>
 
           {league.roster.length === 0 && (

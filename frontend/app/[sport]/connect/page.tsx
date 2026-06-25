@@ -1,13 +1,43 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
-import { ArrowRight, ChevronDown, ExternalLink, Loader2, RotateCcw, Search, Users } from "lucide-react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { ArrowRight, ChevronDown, ExternalLink, Link2, Loader2, Plus, RotateCcw, Search, Trash2, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_BASE || API_BASE;
 const STORAGE_KEY = "waiveredge.roster.v1";
+const LEAGUES_KEY = "waiveredge.leagues.v1";
+
+type SavedLeague = {
+  id: number;
+  platform: string;
+  league_id: string;
+  team_key: string | null;
+  sport: string;
+  roster_count: number;
+  created_at: string | null;
+};
+
+function getSavedLeagueIds(sport: string): number[] {
+  try {
+    const raw = localStorage.getItem(`${LEAGUES_KEY}.${sport}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveLeagueId(sport: string, id: number) {
+  const ids = getSavedLeagueIds(sport);
+  if (!ids.includes(id)) {
+    localStorage.setItem(`${LEAGUES_KEY}.${sport}`, JSON.stringify([...ids, id]));
+  }
+}
+
+function removeLeagueId(sport: string, id: number) {
+  const ids = getSavedLeagueIds(sport).filter((x) => x !== id);
+  localStorage.setItem(`${LEAGUES_KEY}.${sport}`, JSON.stringify(ids));
+}
 
 const SPORT_META: Record<string, { name: string; icon: string; full: string; sample: string }> = {
   nba: { name: "NBA", icon: "\u{1F3C0}", full: "NBA Basketball", sample: "Nikola Jokic\nLuka Doncic\nAnthony Edwards\nJaren Jackson Jr.\nTyrese Haliburton\nBam Adebayo\nJalen Brunson\nTrae Young\nDomantas Sabonis\nScottie Barnes" },
@@ -20,7 +50,7 @@ const ESPN_ONLY_SPORTS = new Set(["wnba"]);
 
 type ESPNTeam = { id: number; name: string; abbrev?: string; top_players?: string[] };
 
-function ESPNConnectForm({ sport }: { sport: string }) {
+function ESPNConnectForm({ sport, onConnected }: { sport: string; onConnected: () => void }) {
   const [leagueId, setLeagueId] = useState("");
   const [espnS2, setEspnS2] = useState("");
   const [swid, setSwid] = useState("");
@@ -65,7 +95,12 @@ function ESPNConnectForm({ sport }: { sport: string }) {
       });
       if (!res.ok) { const b = await res.json().catch(() => null); setResult(b?.detail || `Failed (${res.status})`); return; }
       const data = await res.json();
-      window.location.href = `/${sport}/league/${data.connection_id}`;
+      saveLeagueId(sport, data.connection_id);
+      onConnected();
+      setLeagueId("");
+      setTeams([]);
+      setSelectedTeam(null);
+      setResult(null);
     } catch (err) { setResult(`Could not reach the API. The server may be waking up — please try again in 30 seconds.`); }
     finally { setLoading(false); }
   }
@@ -215,12 +250,75 @@ function ManualRosterForm({ sport, sample }: { sport: string; sample: string }) 
 }
 
 
+function ConnectedLeagues({ sport, leagues, onRemove }: { sport: string; leagues: SavedLeague[]; onRemove: (id: number) => void }) {
+  if (leagues.length === 0) return null;
+  return (
+    <div className="rounded-xl border border-accent/30 bg-accent/5 p-5 mb-8 animate-fade-in">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Trophy size={16} className="text-accent" />
+          <h2 className="text-sm font-semibold">Your Connected Leagues</h2>
+        </div>
+        <span className="text-xs text-muted">{leagues.length} league{leagues.length !== 1 ? "s" : ""}</span>
+      </div>
+      <div className="space-y-2">
+        {leagues.map((l) => (
+          <div key={l.id} className="flex items-center justify-between rounded-lg border border-line bg-card px-4 py-3">
+            <Link href={`/${sport}/league/${l.id}`} className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity">
+              <span className="text-xs font-bold uppercase text-muted bg-surface rounded px-1.5 py-0.5">{l.platform}</span>
+              <div className="min-w-0">
+                <span className="text-sm font-medium block truncate">{l.league_id}</span>
+                <span className="text-xs text-muted">{l.roster_count} player{l.roster_count !== 1 ? "s" : ""} synced</span>
+              </div>
+            </Link>
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              <Link
+                href={`/${sport}/league/${l.id}`}
+                className="flex items-center gap-1 rounded-md bg-accent/15 border border-accent/30 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/25 transition-colors"
+              >
+                <ArrowRight size={12} /> View
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); onRemove(l.id); }}
+                className="p-1 rounded text-muted hover:text-neg transition-colors"
+                title="Remove from this list"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted mt-3 text-center">Connect another league below</p>
+    </div>
+  );
+}
+
+
 function ConnectContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const sport = params.sport as string;
   const meta = SPORT_META[sport] || { name: sport.toUpperCase(), icon: "🏅", full: sport.toUpperCase(), sample: "" };
   const error = searchParams.get("error");
+  const [savedLeagues, setSavedLeagues] = useState<SavedLeague[]>([]);
+
+  const refreshLeagues = useCallback(() => {
+    const ids = getSavedLeagueIds(sport);
+    if (ids.length === 0) { setSavedLeagues([]); return; }
+    fetch(`${API_BASE}/api/leagues?ids=${ids.join(",")}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setSavedLeagues(data))
+      .catch(() => setSavedLeagues([]));
+  }, [sport]);
+
+  useEffect(() => { refreshLeagues(); }, [refreshLeagues]);
+
+  function handleRemove(id: number) {
+    removeLeagueId(sport, id);
+    setSavedLeagues((prev) => prev.filter((l) => l.id !== id));
+  }
 
   return (
     <main className="mx-auto px-6 md:px-12 lg:px-20 py-8">
@@ -229,13 +327,15 @@ function ConnectContent() {
           <span className="text-2xl">{meta.icon}</span>
         </div>
         <h1 className="text-2xl font-extrabold tracking-tight mb-3">
-          Connect Your {meta.name} League
+          Connect Your {meta.name} League{savedLeagues.length > 0 ? "s" : ""}
         </h1>
         <p className="text-sm text-muted leading-relaxed max-w-md mx-auto">
-          Link your fantasy league and get personalized waiver recommendations
+          Link your fantasy league{savedLeagues.length > 0 ? "s" : ""} and get personalized waiver recommendations
           for <em className="text-gray-200 not-italic font-medium">your</em> actual roster.
         </p>
       </div>
+
+      <ConnectedLeagues sport={sport} leagues={savedLeagues} onRemove={handleRemove} />
 
       {error && (
         <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6 text-center">
@@ -260,7 +360,7 @@ function ConnectContent() {
           href={`${AUTH_BASE}/api/auth/yahoo?sport=${sport}`}
           className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-500 transition-colors"
         >
-          Connect with Yahoo <ExternalLink size={14} />
+          {savedLeagues.some((l) => l.platform === "yahoo") ? "Connect another Yahoo league" : "Connect with Yahoo"} <ExternalLink size={14} />
         </a>
       </div>}
 
@@ -270,10 +370,10 @@ function ConnectContent() {
           <span className="text-2xl font-bold text-red-500">ESPN</span>
           <div>
             <h3 className="text-base font-semibold">ESPN Fantasy</h3>
-            <p className="text-xs text-muted">Paste your league ID to connect</p>
+            <p className="text-xs text-muted">{savedLeagues.some((l) => l.platform === "espn") ? "Add another ESPN league" : "Paste your league ID to connect"}</p>
           </div>
         </div>
-        <ESPNConnectForm sport={sport} />
+        <ESPNConnectForm sport={sport} onConnected={refreshLeagues} />
       </div>
 
       <div className="rounded-xl bg-surface/30 border border-line/50 p-5 mb-8">
