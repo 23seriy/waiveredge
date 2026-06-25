@@ -156,6 +156,7 @@ def rank_waiver_adds(
     recs: list[Recommendation] = []
     for fa in free_agents:
         fa_vr = value_of(fa)
+        fa_proj = projections.get(fa.id)
 
         # Weakest droppable rostered player who shares a position with this FA.
         candidates = [
@@ -165,6 +166,7 @@ def rank_waiver_adds(
         ]
         drop = min(candidates, key=lambda p: roster_values[p.id].value, default=None)
         drop_value = roster_values[drop.id].value if drop else 0.0
+        drop_proj = projections.get(drop.id) if drop else None
         marginal = round(fa_vr.value - drop_value, 2)
         slot = next((pos for pos in fa.positions), "UTIL")
 
@@ -182,6 +184,8 @@ def rank_waiver_adds(
                 soft_matchups=fa_vr.soft_matchups,
                 marginal=marginal,
                 rationale=_rationale(fa, fa_vr, drop.name if drop else None, marginal),
+                add_fppg=round(fa_proj.fppg, 1) if fa_proj else 0.0,
+                drop_fppg=round(drop_proj.fppg, 1) if drop_proj else 0.0,
             )
         )
 

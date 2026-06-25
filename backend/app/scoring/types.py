@@ -140,6 +140,8 @@ class Recommendation:
     soft_matchups: int
     marginal: float              # add_value - drop_value (value gained for THIS roster)
     rationale: str
+    add_fppg: float = 0.0       # add player's recency-weighted fantasy pts per game
+    drop_fppg: float = 0.0      # drop player's recency-weighted fantasy pts per game
     # Category-mode extras (None in points mode)
     total_z: float | None = None
     per_cat_z: dict[str, float] | None = None
