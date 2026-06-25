@@ -1,3 +1,6 @@
+"use client";
+
+import { useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Calendar, Flame, Shield, TrendingUp, Zap } from "lucide-react";
 
@@ -6,25 +9,29 @@ const SPORTS = [
     key: "mlb",
     name: "MLB Baseball",
     icon: "\u26BE",
-    description: "H2H Points & 5x5 leagues",
+    description: "H2H Points & 5×5 category leagues",
+    platforms: "Yahoo & ESPN",
+    features: ["Points", "5×5 Cats", "Streamers"],
     active: true,
-    note: "In-season",
   },
   {
     key: "wnba",
     name: "WNBA Basketball",
     icon: "\u{1F3C0}",
-    description: "H2H Points leagues \u2014 ESPN only",
+    description: "H2H Points leagues on ESPN",
+    platforms: "ESPN",
+    features: ["Points", "Streamers"],
     active: true,
-    note: "In-season",
   },
   {
     key: "nba",
     name: "NBA Basketball",
     icon: "\u{1F3C0}",
     description: "H2H Points & 9-Cat leagues",
+    platforms: "Yahoo & ESPN",
+    features: ["Points", "9-Cat", "Streamers"],
     active: false,
-    note: "Offseason \u2014 returns Oct 2026",
+    note: "Returns Oct 2026",
   },
 ];
 
@@ -50,6 +57,12 @@ const VALUE_PROPS = [
 ];
 
 export default function Home() {
+  const sportSectionRef = useRef<HTMLElement>(null);
+
+  function scrollToSports() {
+    sportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   return (
     <div className="min-h-screen bg-bg">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
@@ -94,12 +107,13 @@ export default function Home() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-              <Link
-                href="/mlb"
+              <button
+                type="button"
+                onClick={scrollToSports}
                 className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-lg shadow-accent/20"
               >
                 Get started free <ArrowRight size={16} />
-              </Link>
+              </button>
               <Link
                 href="/mlb/streamers"
                 className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
@@ -113,46 +127,59 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Sport cards */}
-        <section className="max-w-3xl mx-auto px-4 pb-16">
-          <h2 className="text-xs font-semibold text-muted uppercase tracking-widest text-center mb-6">
-            Choose your sport
+        {/* Sport picker */}
+        <section ref={sportSectionRef} className="max-w-3xl mx-auto px-4 pb-16">
+          <h2 className="text-lg font-bold text-center mb-2">
+            Pick your sport
           </h2>
+          <p className="text-sm text-muted text-center mb-8">
+            Choose a league — you can switch anytime from the header.
+          </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
             {SPORTS.map((sport, i) => (
               <Link
                 key={sport.key}
                 href={sport.active ? `/${sport.key}` : "#"}
-                className={`group relative rounded-xl border p-6 text-center transition-all duration-200 animate-slide-up ${
+                className={`group relative rounded-2xl border p-6 transition-all duration-200 animate-slide-up ${
                   sport.active
-                    ? "border-line bg-card hover:border-accent/60 hover:shadow-xl hover:shadow-accent/5 hover:-translate-y-0.5 cursor-pointer"
-                    : "border-line/50 bg-card/40 opacity-50 cursor-not-allowed pointer-events-none"
+                    ? "border-line bg-card hover:border-accent/60 hover:shadow-2xl hover:shadow-accent/10 hover:-translate-y-1 cursor-pointer"
+                    : "border-line/40 bg-card/30 opacity-45 cursor-not-allowed pointer-events-none"
                 }`}
                 style={{ animationDelay: `${0.1 * i}s` }}
               >
-                <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform duration-200">{sport.icon}</span>
-                <h3 className="text-lg font-bold mb-1 flex items-center justify-center gap-2">
-                  {sport.name}
-                  {sport.active ? (
-                    <span className="text-[10px] uppercase tracking-wider font-bold bg-pos/15 text-pos rounded-full px-2 py-0.5">
-                      Live
-                    </span>
-                  ) : (
-                    <span className="text-[10px] uppercase tracking-wider font-bold bg-surface text-muted rounded-full px-2 py-0.5">
-                      Off
-                    </span>
-                  )}
-                </h3>
-                <p className="text-sm text-muted mb-3">{sport.description}</p>
-                {sport.active && (
-                  <span className="inline-flex items-center gap-1 text-sm text-accent font-medium group-hover:gap-2 transition-all">
-                    Enter <ArrowRight size={14} />
-                  </span>
-                )}
-                {!sport.active && (
-                  <span className="text-xs text-muted">{sport.note}</span>
-                )}
+                <div className="flex items-start gap-4">
+                  <span className="text-4xl shrink-0 group-hover:scale-110 transition-transform duration-200">{sport.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-base font-bold">{sport.name}</h3>
+                      {sport.active ? (
+                        <span className="text-[10px] uppercase tracking-wider font-bold bg-pos/15 text-pos rounded-full px-2 py-0.5">
+                          Live
+                        </span>
+                      ) : (
+                        <span className="text-[10px] uppercase tracking-wider font-bold bg-surface text-muted rounded-full px-2 py-0.5">
+                          Off
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted mb-3">{sport.description}</p>
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {sport.features.map((f) => (
+                        <span key={f} className="text-[11px] font-medium bg-surface text-muted rounded-md px-2 py-0.5 border border-line/50">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                    {sport.active ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm text-accent font-semibold group-hover:gap-2.5 transition-all">
+                        Enter {sport.name.split(" ")[0]} <ArrowRight size={14} />
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">{sport.note}</span>
+                    )}
+                  </div>
+                </div>
               </Link>
             ))}
           </div>
