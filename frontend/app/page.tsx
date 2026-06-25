@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, ChartNoAxesCombined, Link2, ListChecks, Shield, Zap } from "lucide-react";
+import AuthHeader from "./components/auth-header";
 
 const SPORTS = [
   {
@@ -56,27 +57,7 @@ const STEPS = [
 export default function Home() {
   return (
     <div className="min-h-screen bg-bg">
-      <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="mx-auto px-6 md:px-12 lg:px-20 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
-              <Zap size={18} className="text-bg" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">WaiverEdge</span>
-          </div>
-          <nav className="flex items-center gap-5">
-            <Link href="/pricing" className="text-sm text-muted hover:text-accent transition-colors">
-              Pricing
-            </Link>
-            <Link
-              href="/signin"
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-sm shadow-accent/20"
-            >
-              Get Started
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <AuthHeader />
 
       <main>
         {/* Hero + Sport Picker — one unified section */}
