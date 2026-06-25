@@ -108,6 +108,42 @@ function TeamLogo({ teamId, sport, size = 18 }: { teamId: number; sport: string;
   );
 }
 
+function playerHeadshotUrl(playerId: number, sport: string): string {
+  if (sport === "mlb") {
+    return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_60,q_auto:best/v1/people/${playerId}/headshot/67/current`;
+  }
+  const espnSport = sport === "wnba" ? "wnba" : "nba";
+  return `https://a.espncdn.com/combiner/i?img=/i/headshots/${espnSport}/players/full/${playerId}.png&h=60&w=60`;
+}
+
+function PlayerHeadshot({ playerId, sport, size = 28, name }: { playerId: number; sport: string; size?: number; name: string }) {
+  const [err, setErr] = useState(false);
+  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
+  if (err) {
+    return (
+      <div
+        className="rounded-full bg-gradient-to-br from-accent/30 to-accent/10 flex items-center justify-center text-[10px] font-bold text-accent shrink-0"
+        style={{ width: size, height: size }}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={playerHeadshotUrl(playerId, sport)}
+      alt={name}
+      width={size}
+      height={size}
+      className="rounded-full object-cover bg-surface shrink-0"
+      onError={() => setErr(true)}
+    />
+  );
+}
+
 
 function ProjectionsTable({ players, sport }: { players: PlayerRow[]; sport: string }) {
   const statKeys = STAT_DISPLAY[sport]?.statistics ?? [];
@@ -118,7 +154,7 @@ function ProjectionsTable({ players, sport }: { players: PlayerRow[]; sport: str
         <thead>
           <tr className="border-b border-line/50 text-muted text-xs">
             <th className="text-left py-2.5 px-2 font-medium w-8">#</th>
-            <th className="text-left py-2.5 px-2 font-medium min-w-[180px]">PLAYER</th>
+            <th className="text-left py-2.5 px-2 font-medium min-w-[220px]">PLAYER</th>
             <th className="text-center py-2.5 px-2 font-medium">GP</th>
             <th className="text-center py-2.5 px-2 font-medium">FPPG</th>
             <th className="text-center py-2.5 px-2 font-medium bg-accent/5 rounded">PROJ</th>
@@ -138,12 +174,15 @@ function ProjectionsTable({ players, sport }: { players: PlayerRow[]; sport: str
               <td className="py-2.5 px-2 text-muted text-xs tabular-nums">{i + 1}</td>
               <td className="py-2.5 px-2">
                 <div className="flex items-center gap-2">
-                  <TeamLogo teamId={p.team_id} sport={sport} size={18} />
+                  <PlayerHeadshot playerId={p.player_id} sport={sport} size={28} name={p.name} />
                   <div>
                     <span className="font-medium text-gray-100">{p.name}</span>
-                    <span className="text-muted text-xs ml-1.5">
-                      {p.team} · {p.position}
-                    </span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <TeamLogo teamId={p.team_id} sport={sport} size={12} />
+                      <span className="text-muted text-[11px]">
+                        {p.team} · {p.position}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </td>
@@ -185,7 +224,7 @@ function StatisticsTable({ players, sport }: { players: PlayerRow[]; sport: stri
         <thead>
           <tr className="border-b border-line/50 text-muted text-xs">
             <th className="text-left py-2.5 px-2 font-medium w-8">#</th>
-            <th className="text-left py-2.5 px-2 font-medium min-w-[180px]">PLAYER</th>
+            <th className="text-left py-2.5 px-2 font-medium min-w-[220px]">PLAYER</th>
             <th className="text-center py-2.5 px-2 font-medium">GP*</th>
             {statKeys.map((key) => (
               <th key={key} className="text-center py-2.5 px-2 font-medium">
@@ -203,12 +242,15 @@ function StatisticsTable({ players, sport }: { players: PlayerRow[]; sport: stri
               <td className="py-2.5 px-2 text-muted text-xs tabular-nums">{i + 1}</td>
               <td className="py-2.5 px-2">
                 <div className="flex items-center gap-2">
-                  <TeamLogo teamId={p.team_id} sport={sport} size={18} />
+                  <PlayerHeadshot playerId={p.player_id} sport={sport} size={28} name={p.name} />
                   <div>
                     <span className="font-medium text-gray-100">{p.name}</span>
-                    <span className="text-muted text-xs ml-1.5">
-                      {p.team} · {p.position}
-                    </span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <TeamLogo teamId={p.team_id} sport={sport} size={12} />
+                      <span className="text-muted text-[11px]">
+                        {p.team} · {p.position}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </td>
@@ -251,7 +293,7 @@ function ScheduleTable({ players, sport, week }: { players: PlayerRow[]; sport: 
         <thead>
           <tr className="border-b border-line/50 text-muted text-xs">
             <th className="text-left py-2.5 px-2 font-medium w-8">#</th>
-            <th className="text-left py-2.5 px-2 font-medium min-w-[180px]">PLAYER</th>
+            <th className="text-left py-2.5 px-2 font-medium min-w-[220px]">PLAYER</th>
             <th className="text-center py-2.5 px-2 font-medium">GP</th>
             {allDates.map((d) => (
               <th key={d} className="text-center py-2.5 px-1.5 font-medium min-w-[65px]">
@@ -273,12 +315,15 @@ function ScheduleTable({ players, sport, week }: { players: PlayerRow[]; sport: 
                 <td className="py-2.5 px-2 text-muted text-xs tabular-nums">{i + 1}</td>
                 <td className="py-2.5 px-2">
                   <div className="flex items-center gap-2">
-                    <TeamLogo teamId={p.team_id} sport={sport} size={18} />
+                    <PlayerHeadshot playerId={p.player_id} sport={sport} size={28} name={p.name} />
                     <div>
                       <span className="font-medium text-gray-100">{p.name}</span>
-                      <span className="text-muted text-xs ml-1.5">
-                        {p.team} · {p.position}
-                      </span>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <TeamLogo teamId={p.team_id} sport={sport} size={12} />
+                        <span className="text-muted text-[11px]">
+                          {p.team} · {p.position}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </td>
