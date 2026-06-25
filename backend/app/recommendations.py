@@ -486,6 +486,9 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
         for tid, gs in sorted(team_games.items(), key=lambda kv: len(kv[1]), reverse=True)
     ]
 
+    # Build per-game schedule lookup: for each game contribution, attach date + opponent + home/away.
+    schedule_by_id = {g.id: g for g in schedule}
+
     # Rank all players by absolute projected value.
     ranked: list[dict] = []
     for p in players.values():
@@ -495,6 +498,20 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
         vr = project_value(p, proj, schedule, window, dvp, injuries, players_by_team)
         if vr.n_games == 0:
             continue
+
+        # Per-game schedule with date, opponent, and home/away.
+        player_schedule = []
+        for c in vr.contributions:
+            g = schedule_by_id.get(c.game_id)
+            opp_abbr = teams_by_id.get(c.opponent_id, {}).get("abbreviation", "?")
+            is_home = g.home_team_id == p.team_id if g else True
+            player_schedule.append({
+                "date": g.date if g else "",
+                "opponent": opp_abbr,
+                "home": is_home,
+                "matchup_mult": round(c.matchup_mult, 2),
+            })
+
         ranked.append({
             "player_id": p.id,
             "name": p.name,
@@ -506,6 +523,9 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
             "soft_matchups": vr.soft_matchups,
             "fppg": proj.fppg,
             "projected_total": vr.value,
+            "games_sampled": proj.games_sampled,
+            "per_game": {k: round(v, 1) for k, v in proj.per_game.items()},
+            "schedule": player_schedule,
             "matchups": [
                 {"opponent": teams_by_id.get(c.opponent_id, {}).get("abbreviation", "?"),
                  "mult": round(c.matchup_mult, 2)}
@@ -518,4 +538,6 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
         "week": {"start": window[0], "end": window[1]},
         "schedule_grid": schedule_grid,
         "streamers": ranked[:top_n],
+        "stat_columns": list(sport_cfg.raw_stats),
+        "stat_labels": dict(sport_cfg.category_labels),
     }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, Flame, LayoutDashboard, LogOut, Zap } from "lucide-react";
+import { ChevronDown, Flame, LayoutDashboard, LogOut, TrendingUp, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAuthUser } from "../components/auth-header";
 
@@ -142,6 +142,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const sport = params.sport as string;
   const onStreamers = pathname.endsWith("/streamers");
+  const onTopAvailable = pathname.endsWith("/top-available");
   const onConnect = pathname.endsWith("/connect");
   const onDashboard = pathname === `/${sport}`;
 
@@ -183,16 +184,22 @@ export default function SportShell({ children }: { children: ReactNode }) {
                 <LayoutDashboard size={14} /> <span className="hidden sm:inline">Dashboard</span>
               </Link>
             )}
-            {!onStreamers && (
-              <Link href={`/${sport}/streamers`} className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg text-muted hover:text-gray-200 hover:bg-surface transition-colors">
-                <Flame size={14} /> <span className="hidden sm:inline">Streamers</span>
-              </Link>
-            )}
-            {onStreamers && (
-              <span className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg text-accent bg-accent/10">
-                <Flame size={14} /> Streamers
-              </span>
-            )}
+            <Link
+              href={`/${sport}/streamers`}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                onStreamers ? "text-accent bg-accent/10" : "text-muted hover:text-gray-200 hover:bg-surface"
+              }`}
+            >
+              <Flame size={14} /> <span className="hidden sm:inline">Streamers</span>
+            </Link>
+            <Link
+              href={`/${sport}/top-available`}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                onTopAvailable ? "text-accent bg-accent/10" : "text-muted hover:text-gray-200 hover:bg-surface"
+              }`}
+            >
+              <TrendingUp size={14} /> <span className="hidden sm:inline">Top Available</span>
+            </Link>
             <Link href="/pricing" className="text-sm px-3 py-1.5 rounded-lg text-muted hover:text-gray-200 hover:bg-surface transition-colors">
               Pricing
             </Link>
@@ -215,6 +222,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-4 text-xs text-muted">
               <Link href="/" className="hover:text-accent transition-colors">Home</Link>
               <Link href={`/${sport}/streamers`} className="hover:text-accent transition-colors">Streamers</Link>
+              <Link href={`/${sport}/top-available`} className="hover:text-accent transition-colors">Top Available</Link>
               <Link href="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
             </div>
           </div>
