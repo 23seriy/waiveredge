@@ -53,7 +53,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-bg flex flex-col">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
               <Zap size={18} className="text-bg" />
@@ -66,7 +66,7 @@ export default function PricingPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-3xl mx-auto px-4 py-16">
+      <main className="flex-1 mx-auto px-6 md:px-12 lg:px-20 py-16">
         <div className="text-center mb-12 animate-fade-in">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-accent/10 mb-4">
             <Crown size={24} className="text-accent" />
@@ -193,7 +193,7 @@ export default function PricingPage() {
       </main>
 
       <footer className="border-t border-line/50 bg-card/30">
-        <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-6">
           <p className="text-center text-[11px] text-muted/50">
             &copy; {new Date().getFullYear()} WaiverEdge
           </p>

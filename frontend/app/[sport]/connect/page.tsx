@@ -153,7 +153,7 @@ function ConnectContent() {
   const error = searchParams.get("error");
 
   return (
-    <main className="max-w-xl mx-auto px-4 py-8">
+    <main className="mx-auto px-6 md:px-12 lg:px-20 py-8">
       <div className="text-center mb-10 animate-fade-in">
         <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-accent/10 mb-4">
           <span className="text-2xl">{meta.icon}</span>

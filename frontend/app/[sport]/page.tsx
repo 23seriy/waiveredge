@@ -382,7 +382,7 @@ export default function SportDashboard() {
   }
 
   return (
-    <main className="max-w-4xl mx-auto px-4">
+    <main className="mx-auto px-6 md:px-12 lg:px-20">
       {/* Hero section */}
       <section className="relative py-12 md:py-16 text-center">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(240,136,62,0.06)_0%,_transparent_50%)] pointer-events-none" />
@@ -427,7 +427,7 @@ export default function SportDashboard() {
       <FixtureStatus sport={sport} />
 
       {/* Manual roster section */}
-      <section className="max-w-3xl mx-auto">
+      <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold">Quick Roster Check</h2>
           <p className="text-xs text-muted">or <Link href={`/${sport}/connect`} className="text-accent hover:underline">connect your league</Link> for full features</p>
@@ -536,7 +536,7 @@ export default function SportDashboard() {
       </section>
 
       {/* Value props */}
-      <section className="max-w-3xl mx-auto mt-10 mb-6">
+      <section className="mt-10 mb-6">
         <div className="rounded-xl bg-surface/30 border border-line/50 p-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-left">
             <div>

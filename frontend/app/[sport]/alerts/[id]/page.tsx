@@ -75,7 +75,7 @@ export default function AlertsPage() {
   const unread = alerts.filter((a) => !a.is_read).length;
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8">
+    <main className="mx-auto px-6 md:px-12 lg:px-20 py-8">
       <div className="flex items-center gap-3 mb-6">
         <Link
           href={`/${sport}/league/${connectionId}`}
