@@ -20,6 +20,7 @@ from slowapi.util import get_remote_address
 
 from .api.alerts import router as alerts_router
 from .api.auth import router as auth_router
+from .api.google_auth import router as google_auth_router
 from .api.billing import router as billing_router
 from .api.espn import router as espn_router
 from .api.leagues import router as leagues_router
@@ -92,6 +93,7 @@ app.add_middleware(
 
 app.include_router(alerts_router)
 app.include_router(auth_router)
+app.include_router(google_auth_router)
 app.include_router(billing_router)
 app.include_router(espn_router)
 app.include_router(leagues_router)

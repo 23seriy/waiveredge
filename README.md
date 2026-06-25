@@ -3,7 +3,7 @@
 **The fantasy sports move-finder.** Fuses *schedule density × positional matchups
 × live injuries × your actual open roster slots* into a single ranked **"do this now"**
 waiver action list — the cross-referencing serious managers currently do by hand across
-3+ tools. Currently supports **NBA basketball** (live) and **MLB baseball** (coming soon).
+3+ tools. Currently supports **NBA basketball**, **MLB baseball**, and **WNBA basketball**.
 
 > The wedge: incumbents each own a slice (Hashtag Basketball = schedule, Basketball
 > Monster = projections, FantasyPros = start/sit). Nobody fuses all of it against *your*
@@ -109,6 +109,7 @@ backend/                  FastAPI + Postgres
     scoring/              ← pure-stdlib scoring core (the IP)
     data/nba_fixtures.py  ← builds REAL fixtures from stats.nba.com (nba_api)
     data/balldontlie.py   ← optional production feed client (header auth, pagination)
+    data/espn.py          ← ESPN Fantasy API client (cookies, read + write)
     data/yahoo.py         ← Yahoo Fantasy API client (OAuth + league data)
     data/ingest.py        ← optional balldontlie → Postgres / fixtures refresh
     api/auth.py           ← Yahoo OAuth endpoints
@@ -122,7 +123,7 @@ backend/                  FastAPI + Postgres
   sample_data_mlb/        ← materialized REAL MLB fixtures (gitignored)
   sample_data_wnba/       ← materialized REAL WNBA fixtures (gitignored)
   scripts/
-  tests/                  ← 96 unit tests
+  tests/                  ← 110 unit tests
 frontend/                 Next.js 15 + Tailwind CSS
   app/                    ← /, /[sport]/, /[sport]/streamers, /[sport]/connect, /[sport]/league/[id], /pricing
                             Supported sports: nba, mlb, wnba
@@ -180,7 +181,8 @@ unlocks the dormant role-bump / availability signals) and a documented SLA.
 - [x] Fixture caching + background builds (24h cache, progress polling)
 - [x] Home page UX redesign (hero, clean header, sport-aware)
 - [x] WNBA support (ESPN leagues, ESPN public API for fixtures)
-- [x] 96 unit tests (API + engine + projections + matchups + name resolution + scoring systems + WNBA)
+- [x] ESPN programmatic add/drop (write API for all sports, deep-link fallback)
+- [x] 110 unit tests (API + engine + projections + matchups + name resolution + scoring systems + WNBA + ESPN transactions)
 - [x] Deploy configs (Dockerfile, Railway, Fly.io, Vercel)
 - [x] Deploy MVP to production (Render + Vercel)
 - [ ] Nightly DvP recompute job + `team_dvp` cache

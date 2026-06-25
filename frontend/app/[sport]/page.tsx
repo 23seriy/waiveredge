@@ -3,15 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
-  ArrowRight,
   ArrowUpDown,
   Calendar,
   ChevronDown,
-  Flame,
   Loader2,
   RotateCcw,
   Search,
-  Shield,
   TrendingUp,
   Zap,
 } from "lucide-react";
@@ -382,60 +379,34 @@ export default function SportDashboard() {
   }
 
   return (
-    <main className="max-w-4xl mx-auto px-4">
-      {/* Hero section */}
-      <section className="relative py-12 md:py-16 text-center">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(240,136,62,0.06)_0%,_transparent_50%)] pointer-events-none" />
-        <div className="relative">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 animate-fade-in">
-            {SPORT_INFO[sport]?.name ?? sport.toUpperCase()} Waiver Wire<br />
-            <span className="text-accent">ranked for your roster</span>
-          </h1>
-          <p className="text-muted text-base max-w-xl mx-auto mb-8 leading-relaxed animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            Paste your roster below or{" "}
-            <Link href={`/${sport}/connect`} className="text-accent hover:underline">connect your league</Link>{" "}
-            for personalized waiver adds — powered by schedule density, matchups, and recent form.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
-            <Link
-              href={`/${sport}/connect`}
-              className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-lg shadow-accent/20"
-            >
-              Connect your league <ArrowRight size={16} />
-            </Link>
-            <Link
-              href={`/${sport}/streamers`}
-              className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
-            >
-              <Flame size={14} /> Free weekly streamers
-            </Link>
-          </div>
-
-          <p className="text-xs text-muted/70 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            Works with {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} &middot; {POINTS_ONLY_SPORTS.has(sport) ? "H2H Points" : `${getCatLabel(sport)} & Points`} leagues
-          </p>
-        </div>
+    <main className="mx-auto px-6 md:px-12 lg:px-20">
+      {/* Compact hero */}
+      <section className="pt-8 pb-2 md:pt-10 md:pb-3 text-center animate-fade-in">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
+          {SPORT_INFO[sport]?.name ?? sport.toUpperCase()} Waiver Wire{" "}
+          <span className="text-accent">ranked for your roster</span>
+        </h1>
+        <p className="text-sm text-muted max-w-lg mx-auto">
+          Paste your roster or{" "}
+          <Link href={`/${sport}/connect`} className="text-accent hover:underline font-medium">connect your league</Link>{" "}
+          for personalized adds.
+          <span className="text-muted/60"> &middot; {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} &middot; {POINTS_ONLY_SPORTS.has(sport) ? "H2H Points" : `${getCatLabel(sport)} & Points`}</span>
+        </p>
       </section>
-
-      {/* Mode control */}
-      <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-        <ModeToggle mode={mode} onChange={handleModeChange} sport={sport} />
-      </div>
 
       {/* Fixture status check */}
       <FixtureStatus sport={sport} />
 
-      {/* Manual roster section */}
-      <section className="max-w-3xl mx-auto">
+      {/* Roster input */}
+      <section className="mt-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold">Quick Roster Check</h2>
-          <p className="text-xs text-muted">or <Link href={`/${sport}/connect`} className="text-accent hover:underline">connect your league</Link> for full features</p>
+          <ModeToggle mode={mode} onChange={handleModeChange} sport={sport} />
         </div>
 
         <form onSubmit={submit} className="mb-8">
           <div className="rounded-xl border border-line bg-card overflow-hidden transition-colors focus-within:border-accent/40">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-surface/50">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-surface/50">
               <span className="text-xs text-muted font-medium uppercase tracking-wider">
                 Your Roster
               </span>
@@ -448,7 +419,7 @@ export default function SportDashboard() {
               </button>
             </div>
             <textarea
-              rows={8}
+              rows={5}
               value={rosterText}
               onChange={(e) => setRosterText(e.target.value)}
               placeholder="One player name per line&#10;&#10;Nikola Jokic&#10;Luka Doncic&#10;..."
@@ -535,31 +506,6 @@ export default function SportDashboard() {
         )}
       </section>
 
-      {/* Value props */}
-      <section className="max-w-3xl mx-auto mt-10 mb-6">
-        <div className="rounded-xl bg-surface/30 border border-line/50 p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-left">
-            <div>
-              <p className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                <Calendar size={14} className="text-accent" /> Schedule density
-              </p>
-              <p className="text-xs text-muted leading-relaxed">More games = more streaming value. We rank who plays most.</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                <TrendingUp size={14} className="text-pos" /> Matchup quality
-              </p>
-              <p className="text-xs text-muted leading-relaxed">Soft opponents boost projections. We factor opponent strength.</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                <Shield size={14} className="text-accent" /> Read-only access
-              </p>
-              <p className="text-xs text-muted leading-relaxed">We never modify your team. Connect with confidence.</p>
-            </div>
-          </div>
-        </div>
-      </section>
     </main>
   );
 }
