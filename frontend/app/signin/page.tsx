@@ -1,11 +1,31 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import { Loader2, Zap } from "lucide-react";
+import { useAuthUser } from "../components/auth-header";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export default function SignInPage() {
+  const { user, loaded } = useAuthUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loaded && user) {
+      router.replace("/");
+    }
+  }, [loaded, user, router]);
+
+  if (!loaded || user) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-accent" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-bg flex flex-col">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">

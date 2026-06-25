@@ -5,23 +5,14 @@ import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, Flame, LayoutDashboard, LogOut, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+import { useAuthUser } from "../components/auth-header";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
-type AuthUser = { id: number; email: string; name: string | null; picture: string | null; tier: string };
-
 function UserMenu() {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user, loaded } = useAuthUser();
   const [open, setOpen] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch(`${API_BASE}/api/auth/me`, { credentials: "include" })
-      .then((r) => r.json())
-      .then((d) => { setUser(d.user ?? null); setLoaded(true); })
-      .catch(() => setLoaded(true));
-  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
