@@ -1,6 +1,3 @@
-"use client";
-
-import { useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Calendar, Flame, Shield, TrendingUp, Zap } from "lucide-react";
 
@@ -57,12 +54,6 @@ const VALUE_PROPS = [
 ];
 
 export default function Home() {
-  const sportSectionRef = useRef<HTMLElement>(null);
-
-  function scrollToSports() {
-    sportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
   return (
     <div className="min-h-screen bg-bg">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
@@ -85,10 +76,10 @@ export default function Home() {
       </header>
 
       <main>
-        {/* Hero */}
+        {/* Hero + Sport Picker — one unified section */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(240,136,62,0.08)_0%,_transparent_60%)] pointer-events-none" />
-          <div className="mx-auto px-6 md:px-12 lg:px-20 pt-20 pb-16 md:pt-28 md:pb-20 text-center relative">
+          <div className="mx-auto px-6 md:px-12 lg:px-20 pt-16 pb-6 md:pt-24 md:pb-8 text-center relative">
             <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-4 py-1.5 text-xs font-medium text-accent mb-6 animate-fade-in">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-pos opacity-75 animate-ping" />
@@ -97,90 +88,69 @@ export default function Home() {
               MLB &amp; WNBA in-season now
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-5 text-balance animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 text-balance animate-fade-in" style={{ animationDelay: "0.1s" }}>
               Know exactly who to pick up{" "}
               <span className="text-accent">for your roster</span>
             </h1>
-            <p className="text-muted text-base md:text-lg max-w-xl mx-auto mb-10 leading-relaxed animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            <p className="text-muted text-base md:text-lg max-w-xl mx-auto mb-3 leading-relaxed animate-fade-in" style={{ animationDelay: "0.2s" }}>
               WaiverEdge fuses schedule density, matchups, and recent form into one
               ranked action list — the waiver move-finder for fantasy managers.
             </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-              <button
-                type="button"
-                onClick={scrollToSports}
-                className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-lg shadow-accent/20"
-              >
-                Get started free <ArrowRight size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={scrollToSports}
-                className="flex items-center gap-2 rounded-lg border border-line px-6 py-3 text-sm font-medium text-muted hover:text-gray-200 hover:border-accent/40 transition-colors"
-              >
-                <Flame size={14} /> Browse free streamers
-              </button>
-            </div>
-            <p className="text-xs text-muted/70 animate-fade-in" style={{ animationDelay: "0.35s" }}>
+            <p className="text-xs text-muted/70 mb-2 animate-fade-in" style={{ animationDelay: "0.25s" }}>
               No sign-up required &middot; Works with Yahoo &amp; ESPN
             </p>
           </div>
         </section>
 
-        {/* Sport picker */}
-        <section ref={sportSectionRef} className="mx-auto px-6 md:px-12 lg:px-20 pb-16">
-          <h2 className="text-lg font-bold text-center mb-2">
-            Pick your sport
+        {/* Sport picker — directly below hero with no gap */}
+        <section className="mx-auto px-6 md:px-12 lg:px-20 pb-16">
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-widest text-center mb-6 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            Pick your sport to get started
           </h2>
-          <p className="text-sm text-muted text-center mb-8">
-            Choose a league — you can switch anytime from the header.
-          </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
             {SPORTS.map((sport, i) => (
               <Link
                 key={sport.key}
                 href={sport.active ? `/${sport.key}` : "#"}
-                className={`group relative rounded-2xl border p-6 transition-all duration-200 animate-slide-up ${
+                className={`group relative rounded-2xl border p-8 text-center transition-all duration-200 animate-slide-up ${
                   sport.active
                     ? "border-line bg-card hover:border-accent/60 hover:shadow-2xl hover:shadow-accent/10 hover:-translate-y-1 cursor-pointer"
-                    : "border-line/40 bg-card/30 opacity-45 cursor-not-allowed pointer-events-none"
+                    : "border-line/40 bg-card/30 opacity-40 cursor-not-allowed pointer-events-none"
                 }`}
-                style={{ animationDelay: `${0.1 * i}s` }}
+                style={{ animationDelay: `${0.3 + 0.1 * i}s` }}
               >
-                <div className="flex items-start gap-4">
-                  <span className="text-4xl shrink-0 group-hover:scale-110 transition-transform duration-200">{sport.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-base font-bold">{sport.name}</h3>
-                      {sport.active ? (
-                        <span className="text-[10px] uppercase tracking-wider font-bold bg-pos/15 text-pos rounded-full px-2 py-0.5">
-                          Live
-                        </span>
-                      ) : (
-                        <span className="text-[10px] uppercase tracking-wider font-bold bg-surface text-muted rounded-full px-2 py-0.5">
-                          Off
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted mb-3">{sport.description}</p>
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {sport.features.map((f) => (
-                        <span key={f} className="text-[11px] font-medium bg-surface text-muted rounded-md px-2 py-0.5 border border-line/50">
-                          {f}
-                        </span>
-                      ))}
-                    </div>
-                    {sport.active ? (
-                      <span className="inline-flex items-center gap-1.5 text-sm text-accent font-semibold group-hover:gap-2.5 transition-all">
-                        Enter {sport.name.split(" ")[0]} <ArrowRight size={14} />
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted">{sport.note}</span>
-                    )}
-                  </div>
+                <span className="text-5xl block mb-4 group-hover:scale-110 transition-transform duration-200">{sport.icon}</span>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h3 className="text-lg font-bold">{sport.name}</h3>
+                  {sport.active ? (
+                    <span className="text-[10px] uppercase tracking-wider font-bold bg-pos/15 text-pos rounded-full px-2 py-0.5">
+                      Live
+                    </span>
+                  ) : (
+                    <span className="text-[10px] uppercase tracking-wider font-bold bg-surface text-muted rounded-full px-2 py-0.5">
+                      Off
+                    </span>
+                  )}
                 </div>
+                <p className="text-sm text-muted mb-3">{sport.description}</p>
+                <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+                  {sport.features.map((f) => (
+                    <span key={f} className="text-[11px] font-medium bg-surface text-muted rounded-md px-2 py-0.5 border border-line/50">
+                      {f}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted/60 mb-4">{sport.platforms}</p>
+                {sport.active ? (
+                  <span className="inline-flex items-center justify-center gap-2 w-full rounded-lg bg-accent/10 border border-accent/30 px-4 py-2.5 text-sm font-semibold text-accent group-hover:bg-accent group-hover:text-bg transition-all">
+                    Enter {sport.name.split(" ")[0]} <ArrowRight size={14} />
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center justify-center w-full rounded-lg bg-surface/50 px-4 py-2.5 text-sm text-muted">
+                    {sport.note}
+                  </span>
+                )}
               </Link>
             ))}
           </div>
