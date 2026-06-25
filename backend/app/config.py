@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     yahoo_redirect_uri: str = "http://localhost:8000/api/auth/yahoo/callback"
     yahoo_game_key: str = "nba"  # nba | mlb | nfl | nhl — switch for offseason testing
 
+    # Google OAuth 2.0 (https://console.cloud.google.com/apis/credentials)
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
+
     # App secret for signing session cookies (generate a random one for production).
     app_secret: str = "change-me-in-production"
 

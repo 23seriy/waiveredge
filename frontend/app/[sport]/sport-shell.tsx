@@ -3,8 +3,79 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, Flame, LayoutDashboard, Zap } from "lucide-react";
+import { ChevronDown, Flame, LayoutDashboard, LogOut, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
+type AuthUser = { id: number; email: string; name: string | null; picture: string | null; tier: string };
+
+function UserMenu() {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/auth/me`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { setUser(d.user ?? null); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  if (!loaded) return null;
+
+  if (!user) {
+    return (
+      <Link
+        href="/signin"
+        className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-sm shadow-accent/20"
+      >
+        Get Started
+      </Link>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(!open)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+        {user.picture ? (
+          <img src={user.picture} alt="" className="h-7 w-7 rounded-full border border-line" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="h-7 w-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-accent">
+            {(user.name || user.email)[0].toUpperCase()}
+          </div>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-line bg-card shadow-2xl shadow-black/40 overflow-hidden z-50 animate-fade-in">
+          <div className="px-4 py-3 border-b border-line/50">
+            <p className="text-sm font-medium truncate">{user.name || "User"}</p>
+            <p className="text-xs text-muted truncate">{user.email}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" })
+                .then(() => window.location.reload());
+            }}
+            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-muted hover:text-gray-200 hover:bg-surface transition-colors"
+          >
+            <LogOut size={14} /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const SPORT_META: Record<string, { name: string; icon: string; active: boolean }> = {
   mlb: { name: "MLB", icon: "\u26BE", active: true },
@@ -134,6 +205,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
             <Link href="/pricing" className="text-sm px-3 py-1.5 rounded-lg text-muted hover:text-gray-200 hover:bg-surface transition-colors">
               Pricing
             </Link>
+            <UserMenu />
           </nav>
         </div>
       </header>

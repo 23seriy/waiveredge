@@ -68,6 +68,12 @@ export default function Home() {
             <Link href="/pricing" className="text-sm text-muted hover:text-accent transition-colors">
               Pricing
             </Link>
+            <Link
+              href="/signin"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-sm shadow-accent/20"
+            >
+              Get Started
+            </Link>
           </nav>
         </div>
       </header>
