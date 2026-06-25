@@ -3,13 +3,18 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
+  ArrowDown,
   ArrowUpDown,
   Calendar,
   ChevronDown,
+  Link2,
   Loader2,
+  Plus,
   RotateCcw,
   Search,
+  Sparkles,
   TrendingUp,
+  Users,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -31,6 +36,8 @@ type Recommendation = {
   total_z: number | null;
   per_cat_z: Record<string, number> | null;
   helps: string[] | null;
+  add_fppg?: number;
+  drop_fppg?: number;
 };
 
 type Payload = {
@@ -76,32 +83,73 @@ const MLB_5X5 = ["avg", "hr", "rbi", "r", "sb", "w", "sv", "era", "whip", "k"];
 function getCatKeys(sport: Sport) { return sport === "mlb" ? MLB_5X5 : NINE_CAT; }
 function getCatLabel(sport: Sport) { return sport === "mlb" ? "5x5" : "9-Cat"; }
 
+function formatDate(iso: string) {
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function playerHeadshotUrl(playerId: number, sport: string): string {
+  if (sport === "mlb") {
+    return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_80,q_auto:best/v1/people/${playerId}/headshot/67/current`;
+  }
+  const espnSport = sport === "wnba" ? "wnba" : "nba";
+  return `https://a.espncdn.com/combiner/i?img=/i/headshots/${espnSport}/players/full/${playerId}.png&h=80&w=80`;
+}
+
+function PlayerHeadshot({ playerId, sport, size = 40, name }: { playerId: number; sport: string; size?: number; name: string }) {
+  const [err, setErr] = useState(false);
+  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
+  if (err) {
+    return (
+      <div
+        className="rounded-full bg-gradient-to-br from-accent/30 to-accent/10 flex items-center justify-center text-xs font-bold text-accent shrink-0"
+        style={{ width: size, height: size }}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={playerHeadshotUrl(playerId, sport)}
+      alt={name}
+      width={size}
+      height={size}
+      className="rounded-full object-cover bg-surface shrink-0"
+      onError={() => setErr(true)}
+    />
+  );
+}
+
 
 function ModeToggle({ mode, onChange, sport }: { mode: ScoringMode; onChange: (m: ScoringMode) => void; sport: Sport }) {
   if (POINTS_ONLY_SPORTS.has(sport)) return null;
   return (
-    <div className="flex rounded-lg bg-surface p-1 gap-1">
+    <div className="flex rounded-lg bg-surface/80 p-0.5 gap-0.5">
       <button
         type="button"
         onClick={() => onChange("points")}
-        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
           mode === "points"
-            ? "bg-accent text-bg"
+            ? "bg-accent text-bg shadow-sm shadow-accent/20"
             : "text-muted hover:text-gray-200"
         }`}
       >
-        <Zap size={14} /> Points
+        <Zap size={13} /> Points
       </button>
       <button
         type="button"
         onClick={() => onChange("categories")}
-        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
           mode === "categories"
-            ? "bg-accent text-bg"
+            ? "bg-accent text-bg shadow-sm shadow-accent/20"
             : "text-muted hover:text-gray-200"
         }`}
       >
-        <ArrowUpDown size={14} /> {getCatLabel(sport)}
+        <ArrowUpDown size={13} /> {getCatLabel(sport)}
       </button>
     </div>
   );
@@ -110,9 +158,9 @@ function ModeToggle({ mode, onChange, sport }: { mode: ScoringMode; onChange: (m
 
 function ZBadge({ cat, z }: { cat: string; z: number }) {
   const label = CAT_LABELS[cat] ?? cat;
-  const color = z > 0.3 ? "text-pos" : z < -0.3 ? "text-neg" : "text-muted";
+  const color = z > 0.3 ? "text-pos bg-pos/10" : z < -0.3 ? "text-neg bg-neg/10" : "text-muted bg-surface";
   return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-mono ${color} bg-surface`}>
+    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-mono font-medium ${color}`}>
       {label} {z >= 0 ? "+" : ""}{z.toFixed(1)}
     </span>
   );
@@ -150,13 +198,13 @@ function AIInsightButton({ rec }: { rec: Recommendation }) {
         type="button"
         onClick={fetchInsight}
         disabled={loading}
-        className="flex items-center gap-1 text-xs text-accent/70 hover:text-accent transition-colors disabled:opacity-50"
+        className="flex items-center gap-1 text-[11px] font-medium text-accent/70 hover:text-accent transition-colors disabled:opacity-50"
       >
-        {loading ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
-        {insight && visible ? "Hide AI" : "AI Insight"}
+        {loading ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+        {insight && visible ? "Hide" : "AI Insight"}
       </button>
       {visible && insight && (
-        <p className="mt-1.5 text-sm text-gray-300 leading-relaxed bg-accent/5 border border-accent/20 rounded-lg px-3 py-2">
+        <p className="mt-2 text-sm text-gray-300 leading-relaxed bg-gradient-to-r from-accent/5 to-transparent border border-accent/15 rounded-lg px-3 py-2.5">
           {insight}
         </p>
       )}
@@ -171,67 +219,100 @@ function RecCard({ rec, rank, mode, sport }: { rec: Recommendation; rank: number
   const marginalStr = mode === "categories"
     ? `${rec.marginal >= 0 ? "+" : ""}${rec.marginal.toFixed(1)}z`
     : `${rec.marginal >= 0 ? "+" : ""}${rec.marginal.toFixed(1)}`;
+  const isTop3 = rank <= 3;
 
   return (
-    <div className="group rounded-xl border border-line bg-card p-4 transition-colors hover:border-accent/40">
-      <div className="flex gap-4 items-start">
-        <div className="flex flex-col items-center shrink-0 w-10">
-          <span className="text-xs text-muted font-medium">#{rank}</span>
-          <span className={`text-lg font-bold tabular-nums ${rec.marginal >= 0 ? "text-pos" : "text-neg"}`}>
-            {marginalStr}
+    <div className={`group relative rounded-xl border bg-card/80 backdrop-blur-sm p-4 transition-all hover:shadow-lg hover:shadow-accent/5 ${
+      isTop3 ? "border-accent/30 hover:border-accent/50" : "border-line/60 hover:border-line"
+    }`}>
+      {isTop3 && (
+        <div className="absolute -top-px left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-accent/60 to-transparent rounded-full" />
+      )}
+
+      <div className="flex gap-3.5 items-start">
+        {/* Rank + headshot */}
+        <div className="flex flex-col items-center shrink-0 gap-1.5">
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${isTop3 ? "text-accent" : "text-muted/60"}`}>
+            #{rank}
           </span>
+          <PlayerHeadshot playerId={rec.add_player_id} sport={sport} size={44} name={rec.add_name} />
         </div>
 
+        {/* Main content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <h3 className="text-base font-semibold text-gray-100">
+          {/* Player name + position */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-[15px] font-semibold text-gray-100 leading-tight">
               {rec.add_name}
             </h3>
-            <span className="text-sm text-muted">{rec.add_position}</span>
+            <span className="text-xs text-muted/80 bg-surface/80 rounded px-1.5 py-0.5 font-medium">
+              {rec.add_position}
+            </span>
             {rec.helps && rec.helps.length > 0 && (
-              <span className="text-xs bg-pos/15 text-pos rounded-full px-2 py-0.5 font-medium">
+              <span className="text-[10px] bg-pos/15 text-pos rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide">
                 helps weak cats
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-3 mt-1.5 text-sm text-muted">
-            <span className="flex items-center gap-1">
-              <Calendar size={12} /> {rec.n_games} game{rec.n_games !== 1 ? "s" : ""}
-            </span>
-            {rec.soft_matchups > 0 && (
+          {/* Value + stats row */}
+          <div className="flex items-center gap-4 mt-2">
+            <div className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-sm font-bold tabular-nums ${
+              rec.marginal >= 0 ? "bg-pos/10 text-pos" : "bg-neg/10 text-neg"
+            }`}>
+              {rec.marginal >= 0 ? <TrendingUp size={12} /> : <ArrowDown size={12} />}
+              {marginalStr}
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted">
               <span className="flex items-center gap-1">
-                <TrendingUp size={12} /> {rec.soft_matchups} soft
+                <Calendar size={11} /> {rec.n_games} game{rec.n_games !== 1 ? "s" : ""}
               </span>
-            )}
-            {rec.drop_name && (
-              <span>
-                drop <span className="text-accent font-medium">{rec.drop_name}</span>
-              </span>
-            )}
+              {rec.soft_matchups > 0 && (
+                <span className="flex items-center gap-1 text-pos/80">
+                  <TrendingUp size={11} /> {rec.soft_matchups} soft
+                </span>
+              )}
+              {rec.add_fppg ? (
+                <span className="tabular-nums">{rec.add_fppg.toFixed(1)} fppg</span>
+              ) : null}
+            </div>
           </div>
 
+          {/* Drop recommendation */}
+          {rec.drop_name && (
+            <div className="flex items-center gap-2 mt-2 text-xs">
+              <span className="text-muted/60">drop</span>
+              <span className="inline-flex items-center gap-1 text-neg/80 bg-neg/5 border border-neg/10 rounded-md px-2 py-0.5 font-medium">
+                <ArrowDown size={10} />
+                {rec.drop_name}
+                {rec.drop_fppg ? <span className="text-muted/50 ml-0.5">({rec.drop_fppg.toFixed(1)})</span> : null}
+              </span>
+            </div>
+          )}
+
+          {/* Category z-scores */}
           {isCategory && rec.per_cat_z && (
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="flex flex-wrap gap-1 mt-2.5">
               {getCatKeys(sport).filter((c) => c in rec.per_cat_z!).map((cat) => (
                 <ZBadge key={cat} cat={cat} z={rec.per_cat_z![cat]} />
               ))}
             </div>
           )}
 
-          <div className="flex items-center gap-3 mt-2">
+          {/* Details + AI */}
+          <div className="flex items-center gap-3 mt-2.5">
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="flex items-center gap-1 text-xs text-muted hover:text-gray-300 transition-colors"
+              className="flex items-center gap-1 text-[11px] font-medium text-muted hover:text-gray-300 transition-colors"
             >
-              <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
-              {expanded ? "Less" : "Details"}
+              <ChevronDown size={11} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+              {expanded ? "Less" : "Why?"}
             </button>
             <AIInsightButton rec={rec} />
           </div>
           {expanded && (
-            <p className="mt-1.5 text-sm text-muted leading-relaxed">{rec.rationale}</p>
+            <p className="mt-2 text-[13px] text-muted leading-relaxed">{rec.rationale}</p>
           )}
         </div>
       </div>
@@ -242,16 +323,19 @@ function RecCard({ rec, rank, mode, sport }: { rec: Recommendation; rank: number
 
 function SkeletonCard() {
   return (
-    <div className="rounded-xl border border-line bg-card p-4 animate-pulse">
-      <div className="flex gap-4">
-        <div className="w-10 flex flex-col items-center gap-1">
-          <div className="h-3 w-6 rounded bg-line" />
-          <div className="h-5 w-10 rounded bg-line" />
+    <div className="rounded-xl border border-line/50 bg-card/60 p-4 animate-pulse">
+      <div className="flex gap-3.5">
+        <div className="flex flex-col items-center gap-1.5 shrink-0">
+          <div className="h-3 w-5 rounded bg-line/50" />
+          <div className="h-11 w-11 rounded-full bg-line/50" />
         </div>
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-40 rounded bg-line" />
-          <div className="h-3 w-60 rounded bg-line" />
-          <div className="h-3 w-32 rounded bg-line" />
+        <div className="flex-1 space-y-2.5">
+          <div className="h-4 w-36 rounded bg-line/50" />
+          <div className="flex gap-3">
+            <div className="h-7 w-16 rounded-lg bg-line/50" />
+            <div className="h-4 w-24 rounded bg-line/50 self-center" />
+          </div>
+          <div className="h-3 w-48 rounded bg-line/50" />
         </div>
       </div>
     </div>
@@ -284,7 +368,7 @@ function FixtureStatus({ sport }: { sport: Sport }) {
   if (!status.building) return null;
 
   return (
-    <div className="rounded-xl border border-accent/30 bg-accent/5 p-6 text-center mb-6">
+    <div className="rounded-xl border border-accent/30 bg-gradient-to-r from-accent/5 to-transparent p-6 text-center mb-6">
       <Loader2 size={24} className="animate-spin text-accent mx-auto mb-2" />
       <h3 className="text-sm font-semibold mb-1">
         Preparing {SPORT_INFO[sport as Sport]?.name ?? sport.toUpperCase()} data...
@@ -378,134 +462,172 @@ export default function SportDashboard() {
     setRosterText(SPORT_INFO[sport]?.sample ?? "");
   }
 
+  const rosterCount = rosterText.split("\n").filter((l) => l.trim()).length;
+
   return (
-    <main className="mx-auto px-6 md:px-12 lg:px-20">
-      {/* Compact hero */}
-      <section className="pt-8 pb-2 md:pt-10 md:pb-3 text-center animate-fade-in">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
-          {SPORT_INFO[sport]?.name ?? sport.toUpperCase()} Waiver Wire{" "}
-          <span className="text-accent">ranked for your roster</span>
+    <main className="mx-auto px-4 md:px-8 lg:px-16 max-w-5xl">
+      {/* Hero */}
+      <section className="pt-8 pb-4 md:pt-12 md:pb-6 text-center animate-fade-in">
+        <div className="inline-flex items-center gap-2 rounded-full bg-accent/10 border border-accent/20 px-4 py-1.5 mb-4">
+          <Zap size={14} className="text-accent" />
+          <span className="text-xs font-semibold text-accent">
+            {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} · {POINTS_ONLY_SPORTS.has(sport) ? "H2H Points" : `${getCatLabel(sport)} & Points`}
+          </span>
+        </div>
+        <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight mb-3">
+          {SPORT_INFO[sport]?.name ?? sport.toUpperCase()} Waiver Wire
         </h1>
-        <p className="text-sm text-muted max-w-lg mx-auto">
-          Paste your roster or{" "}
-          <Link href={`/${sport}/connect`} className="text-accent hover:underline font-medium">connect your league</Link>{" "}
-          for personalized adds.
-          <span className="text-muted/60"> &middot; {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} &middot; {POINTS_ONLY_SPORTS.has(sport) ? "H2H Points" : `${getCatLabel(sport)} & Points`}</span>
+        <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
+          Paste your roster to get personalized add/drop recommendations,
+          or{" "}
+          <Link href={`/${sport}/connect`} className="text-accent hover:underline font-medium inline-flex items-center gap-0.5">
+            <Link2 size={12} /> connect your league
+          </Link>
+          .
         </p>
       </section>
 
       {/* Fixture status check */}
       <FixtureStatus sport={sport} />
 
-      {/* Roster input */}
-      <section className="mt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold">Quick Roster Check</h2>
-          <ModeToggle mode={mode} onChange={handleModeChange} sport={sport} />
+      {/* Two-column layout: input + results */}
+      <section className="mt-2 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left: Roster input */}
+        <div className="lg:col-span-4 lg:sticky lg:top-20 lg:self-start">
+          <div className="rounded-xl border border-line/60 bg-card/80 backdrop-blur-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-line/40 bg-surface/30">
+              <div className="flex items-center gap-2">
+                <Users size={13} className="text-accent" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Your Roster
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted/60 tabular-nums">{rosterCount} players</span>
+                <button
+                  type="button"
+                  onClick={loadSample}
+                  className="flex items-center gap-1 text-[11px] text-muted hover:text-accent transition-colors"
+                >
+                  <RotateCcw size={10} /> Sample
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={submit}>
+              <textarea
+                rows={8}
+                value={rosterText}
+                onChange={(e) => setRosterText(e.target.value)}
+                placeholder="One player name per line&#10;&#10;Aaron Judge&#10;Shohei Ohtani&#10;Mookie Betts&#10;..."
+                className="w-full bg-transparent px-4 py-3 text-[13px] font-mono text-gray-200 placeholder:text-muted/30 resize-y focus:outline-none min-h-[200px]"
+              />
+
+              <div className="px-4 pb-4 space-y-3">
+                <ModeToggle mode={mode} onChange={handleModeChange} sport={sport} />
+
+                <button
+                  type="submit"
+                  disabled={loading || !rosterText.trim()}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-sm font-semibold text-bg transition-all hover:brightness-110 hover:shadow-lg hover:shadow-accent/25 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:brightness-100"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" /> Analyzing…
+                    </>
+                  ) : (
+                    <>
+                      <Search size={15} /> Rank waiver adds
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
-        <form onSubmit={submit} className="mb-8">
-          <div className="rounded-xl border border-line bg-card overflow-hidden transition-colors focus-within:border-accent/40">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-surface/50">
-              <span className="text-xs text-muted font-medium uppercase tracking-wider">
-                Your Roster
-              </span>
-              <button
-                type="button"
-                onClick={loadSample}
-                className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors"
-              >
-                <RotateCcw size={11} /> Load sample
-              </button>
+        {/* Right: Results */}
+        <div className="lg:col-span-8">
+          {/* Error */}
+          {error && (
+            <div className="rounded-xl border border-neg/30 bg-neg/5 px-4 py-4 mb-5 animate-fade-in">
+              <p className="text-sm text-neg">{error}</p>
             </div>
-            <textarea
-              rows={5}
-              value={rosterText}
-              onChange={(e) => setRosterText(e.target.value)}
-              placeholder="One player name per line&#10;&#10;Nikola Jokic&#10;Luka Doncic&#10;..."
-              className="w-full bg-transparent px-4 py-3 text-sm font-mono text-gray-200 placeholder:text-muted/40 resize-y focus:outline-none"
-            />
-          </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={loading || !rosterText.trim()}
-            className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-3 text-sm font-semibold text-bg transition-all hover:brightness-110 hover:shadow-lg hover:shadow-accent/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:brightness-100"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" /> Analyzing…
-              </>
-            ) : (
-              <>
-                <Search size={16} /> Rank waiver adds
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Error */}
-        {error && (
-          <div className="rounded-xl border border-neg/30 bg-neg/5 px-4 py-4 mb-6 animate-fade-in">
-            <p className="text-sm text-neg">{error}</p>
-          </div>
-        )}
-
-        {/* Loading skeleton */}
-        {loading && !data && (
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
-          </div>
-        )}
-
-        {/* Results */}
-        {data && !loading && (
-          <div className="animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-base font-semibold">
-                  Waiver Action List
-                </h2>
-                <p className="text-xs text-muted mt-0.5">
-                  Week of {data.week.start} to {data.week.end}
-                  {typeof data.resolved_count === "number" && (
-                    <> &middot; {data.resolved_count} roster players matched</>
-                  )}
-                  {data.scoring_mode === "categories" && (
-                    <> &middot; <span className="text-accent">{getCatLabel(sport)} z-score mode</span></>
-                  )}
-                </p>
-              </div>
-              <span className="text-xs text-muted bg-surface px-2 py-1 rounded">
-                {data.recommendations.length} add{data.recommendations.length !== 1 ? "s" : ""}
-              </span>
+          {/* Loading skeleton */}
+          {loading && !data && (
+            <div className="space-y-3 animate-fade-in">
+              {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
             </div>
+          )}
 
-            {data.unresolved && data.unresolved.length > 0 && (
-              <div className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 mb-4">
-                <p className="text-sm text-accent">
-                  Couldn&apos;t match: {data.unresolved.join(", ")}. Fix spelling or remove the line.
-                </p>
+          {/* Empty state before results */}
+          {!data && !loading && !error && (
+            <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+              <div className="h-16 w-16 rounded-2xl bg-surface/80 flex items-center justify-center mb-4">
+                <Search size={28} className="text-muted/40" />
               </div>
-            )}
+              <h3 className="text-sm font-semibold text-muted mb-1">No results yet</h3>
+              <p className="text-xs text-muted/60 max-w-xs">
+                Paste your roster on the left and hit &ldquo;Rank waiver adds&rdquo; to see personalized recommendations.
+              </p>
+            </div>
+          )}
 
-            {data.recommendations.length === 0 ? (
-              <div className="text-center py-16 rounded-xl border border-line bg-card/50">
-                <span className="text-3xl block mb-3">🎉</span>
-                <p className="text-sm font-medium mb-1">Your roster is stacked</p>
-                <p className="text-xs text-muted">No free agents outrank your current players this week.</p>
+          {/* Results */}
+          {data && !loading && (
+            <div className="animate-fade-in">
+              {/* Results header */}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Plus size={16} className="text-accent" />
+                    Waiver Action List
+                  </h2>
+                  <p className="text-xs text-muted mt-0.5 flex items-center gap-1.5">
+                    <Calendar size={10} />
+                    {formatDate(data.week.start)} – {formatDate(data.week.end)}
+                    {typeof data.resolved_count === "number" && (
+                      <> · {data.resolved_count} matched</>
+                    )}
+                    {data.scoring_mode === "categories" && (
+                      <> · <span className="text-accent font-medium">{getCatLabel(sport)} z-score</span></>
+                    )}
+                  </p>
+                </div>
+                <span className="text-xs text-muted bg-surface/80 px-2.5 py-1 rounded-md font-medium tabular-nums">
+                  {data.recommendations.length} add{data.recommendations.length !== 1 ? "s" : ""}
+                </span>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {data.recommendations.map((r, i) => (
-                  <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={sport} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+
+              {/* Unresolved names */}
+              {data.unresolved && data.unresolved.length > 0 && (
+                <div className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 mb-4">
+                  <p className="text-sm text-accent">
+                    Couldn&apos;t match: <span className="font-medium">{data.unresolved.join(", ")}</span>. Fix spelling or remove the line.
+                  </p>
+                </div>
+              )}
+
+              {/* Empty results */}
+              {data.recommendations.length === 0 ? (
+                <div className="text-center py-20 rounded-xl border border-line/50 bg-card/50">
+                  <span className="text-4xl block mb-3">🎉</span>
+                  <p className="text-sm font-semibold mb-1">Your roster is stacked</p>
+                  <p className="text-xs text-muted">No free agents outrank your current players this week.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {data.recommendations.map((r, i) => (
+                    <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={sport} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </section>
-
     </main>
   );
 }
