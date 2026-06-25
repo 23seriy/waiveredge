@@ -489,9 +489,12 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
     # Build per-game schedule lookup: for each game contribution, attach date + opponent + home/away.
     schedule_by_id = {g.id: g for g in schedule}
 
-    # Rank all players by absolute projected value.
+    # Only rank free agents (players not on any roster).
+    free_agent_ids = set(cfg.get("free_agents", []))
     ranked: list[dict] = []
     for p in players.values():
+        if free_agent_ids and p.id not in free_agent_ids:
+            continue
         proj = projections.get(p.id, Projection(p.id, 0.0, 0, {}))
         if proj.games_sampled < 3 or proj.fppg < 10:
             continue
