@@ -14,10 +14,13 @@ const SPORT_META: Record<string, { name: string; icon: string; active: boolean }
 
 const VALID_SPORTS = new Set(["nba", "mlb", "wnba"]);
 
-function SportSwitcher({ currentSport }: { currentSport: string }) {
+function SportSwitcher({ currentSport, pathname }: { currentSport: string; pathname: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = SPORT_META[currentSport];
+
+  // Preserve sub-path when switching sports (e.g. /mlb/streamers → /wnba/streamers)
+  const subPath = pathname.replace(`/${currentSport}`, "") || "";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -46,7 +49,7 @@ function SportSwitcher({ currentSport }: { currentSport: string }) {
           {Object.entries(SPORT_META).map(([key, meta]) => (
             <Link
               key={key}
-              href={meta.active ? `/${key}` : "#"}
+              href={meta.active ? `/${key}${subPath}` : "#"}
               onClick={() => setOpen(false)}
               className={`flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
                 key === currentSport
@@ -106,7 +109,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
               </div>
               <span className="text-lg font-bold tracking-tight hidden sm:inline">WaiverEdge</span>
             </Link>
-            <SportSwitcher currentSport={sport} />
+            <SportSwitcher currentSport={sport} pathname={pathname} />
           </div>
           <nav className="flex items-center gap-1">
             {onStreamers || onConnect ? (
