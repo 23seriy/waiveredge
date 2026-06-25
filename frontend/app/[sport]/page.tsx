@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   ArrowDown,
   ArrowUpDown,
@@ -10,11 +10,9 @@ import {
   Link2,
   Loader2,
   Plus,
-  RotateCcw,
   Search,
   Sparkles,
   TrendingUp,
-  Users,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -381,42 +379,25 @@ function FixtureStatus({ sport }: { sport: Sport }) {
 }
 
 
-export default function SportDashboard() {
+function DashboardContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const sport = (params.sport as Sport) || "nba";
+  const source = searchParams.get("source");
 
   const [rosterText, setRosterText] = useState("");
   const [mode, setMode] = useState<ScoringMode>("points");
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const autoSubmitted = useRef(false);
 
-  useEffect(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem(`${STORAGE_KEY}.${sport}`) : null;
-    setRosterText(saved && saved.trim() ? saved : (SPORT_INFO[sport]?.sample ?? ""));
-    const savedMode = typeof window !== "undefined" ? localStorage.getItem(MODE_KEY) : null;
-    if (POINTS_ONLY_SPORTS.has(sport)) {
-      setMode("points");
-    } else if (savedMode === "points" || savedMode === "categories") {
-      setMode(savedMode);
-    }
-    setData(null);
-  }, [sport]);
-
-  function handleModeChange(m: ScoringMode) {
-    setMode(m);
-    localStorage.setItem(MODE_KEY, m);
-  }
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  const fetchRecommendations = useCallback(async (roster: string[], scoringMode: ScoringMode) => {
     setLoading(true);
     setError(null);
-    const roster = rosterText.split("\n").map((s) => s.trim()).filter(Boolean);
 
-    const body: Record<string, unknown> = { roster, scoring_mode: mode, sport };
-    if (mode === "categories") body.categories = getCatKeys(sport);
-    localStorage.setItem(`${STORAGE_KEY}.${sport}`, rosterText);
+    const body: Record<string, unknown> = { roster, scoring_mode: scoringMode, sport };
+    if (scoringMode === "categories") body.categories = getCatKeys(sport);
 
     for (let attempt = 0; attempt < 2; attempt++) {
       const controller = new AbortController();
@@ -456,178 +437,176 @@ export default function SportDashboard() {
       }
     }
     setLoading(false);
+  }, [sport]);
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem(`${STORAGE_KEY}.${sport}`) : null;
+    setRosterText(saved && saved.trim() ? saved : "");
+    const savedMode = typeof window !== "undefined" ? localStorage.getItem(MODE_KEY) : null;
+    if (POINTS_ONLY_SPORTS.has(sport)) {
+      setMode("points");
+    } else if (savedMode === "points" || savedMode === "categories") {
+      setMode(savedMode);
+    }
+    setData(null);
+    autoSubmitted.current = false;
+  }, [sport]);
+
+  // Auto-submit when arriving from connect page with ?source=manual
+  useEffect(() => {
+    if (source === "manual" && !autoSubmitted.current) {
+      const saved = typeof window !== "undefined" ? localStorage.getItem(`${STORAGE_KEY}.${sport}`) : null;
+      if (saved && saved.trim()) {
+        autoSubmitted.current = true;
+        const roster = saved.split("\n").map((s) => s.trim()).filter(Boolean);
+        const savedMode = (typeof window !== "undefined" ? localStorage.getItem(MODE_KEY) : null) as ScoringMode | null;
+        const effectiveMode = POINTS_ONLY_SPORTS.has(sport) ? "points" : (savedMode === "categories" ? "categories" : "points");
+        fetchRecommendations(roster, effectiveMode);
+      }
+    }
+  }, [source, sport, fetchRecommendations]);
+
+  function handleModeChange(m: ScoringMode) {
+    setMode(m);
+    localStorage.setItem(MODE_KEY, m);
   }
 
-  function loadSample() {
-    setRosterText(SPORT_INFO[sport]?.sample ?? "");
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const roster = rosterText.split("\n").map((s) => s.trim()).filter(Boolean);
+    localStorage.setItem(`${STORAGE_KEY}.${sport}`, rosterText);
+    fetchRecommendations(roster, mode);
   }
-
-  const rosterCount = rosterText.split("\n").filter((l) => l.trim()).length;
 
   return (
-    <main className="mx-auto px-4 md:px-8 lg:px-16 max-w-5xl">
+    <main className="mx-auto px-4 md:px-8 lg:px-16 max-w-4xl">
       {/* Hero */}
-      <section className="pt-8 pb-4 md:pt-12 md:pb-6 text-center animate-fade-in">
-        <div className="inline-flex items-center gap-2 rounded-full bg-accent/10 border border-accent/20 px-4 py-1.5 mb-4">
-          <Zap size={14} className="text-accent" />
-          <span className="text-xs font-semibold text-accent">
-            {ESPN_ONLY_SPORTS.has(sport) ? "ESPN" : "Yahoo & ESPN"} · {POINTS_ONLY_SPORTS.has(sport) ? "H2H Points" : `${getCatLabel(sport)} & Points`}
-          </span>
-        </div>
-        <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight mb-3">
+      <section className="pt-8 pb-4 md:pt-10 md:pb-5 text-center animate-fade-in">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
           {SPORT_INFO[sport]?.name ?? sport.toUpperCase()} Waiver Wire
         </h1>
         <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
-          Paste your roster to get personalized add/drop recommendations,
-          or{" "}
-          <Link href={`/${sport}/connect`} className="text-accent hover:underline font-medium inline-flex items-center gap-0.5">
-            <Link2 size={12} /> connect your league
-          </Link>
-          .
+          Personalized add/drop recommendations for your roster.
         </p>
       </section>
 
       {/* Fixture status check */}
       <FixtureStatus sport={sport} />
 
-      {/* Two-column layout: input + results */}
-      <section className="mt-2 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Roster input */}
-        <div className="lg:col-span-4 lg:sticky lg:top-20 lg:self-start">
-          <div className="rounded-xl border border-line/60 bg-card/80 backdrop-blur-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-line/40 bg-surface/30">
-              <div className="flex items-center gap-2">
-                <Users size={13} className="text-accent" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Your Roster
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted/60 tabular-nums">{rosterCount} players</span>
-                <button
-                  type="button"
-                  onClick={loadSample}
-                  className="flex items-center gap-1 text-[11px] text-muted hover:text-accent transition-colors"
-                >
-                  <RotateCcw size={10} /> Sample
-                </button>
-              </div>
+      {/* Error */}
+      {error && (
+        <div className="rounded-xl border border-neg/30 bg-neg/5 px-4 py-4 mb-5 animate-fade-in">
+          <p className="text-sm text-neg">{error}</p>
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {loading && !data && (
+        <div className="space-y-3 animate-fade-in">
+          {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
+
+      {/* Empty state — direct to connect page */}
+      {!data && !loading && !error && (
+        <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+          <div className="h-16 w-16 rounded-2xl bg-surface/80 flex items-center justify-center mb-5">
+            <Search size={28} className="text-muted/40" />
+          </div>
+          <h3 className="text-base font-semibold mb-2">Get your waiver recommendations</h3>
+          <p className="text-sm text-muted max-w-sm mb-6">
+            Connect your league or paste your roster to see who you should pick up this week.
+          </p>
+          <Link
+            href={`/${sport}/connect`}
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-bg hover:brightness-110 hover:shadow-lg hover:shadow-accent/25 transition-all"
+          >
+            <Link2 size={15} /> Connect your league
+          </Link>
+        </div>
+      )}
+
+      {/* Results */}
+      {data && !loading && (
+        <div className="animate-fade-in">
+          {/* Results header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Plus size={16} className="text-accent" />
+                Waiver Action List
+              </h2>
+              <p className="text-xs text-muted mt-0.5 flex items-center gap-1.5">
+                <Calendar size={10} />
+                {formatDate(data.week.start)} – {formatDate(data.week.end)}
+                {typeof data.resolved_count === "number" && (
+                  <> · {data.resolved_count} matched</>
+                )}
+                {data.scoring_mode === "categories" && (
+                  <> · <span className="text-accent font-medium">{getCatLabel(sport)} z-score</span></>
+                )}
+              </p>
             </div>
+            <span className="text-xs text-muted bg-surface/80 px-2.5 py-1 rounded-md font-medium tabular-nums">
+              {data.recommendations.length} add{data.recommendations.length !== 1 ? "s" : ""}
+            </span>
+          </div>
 
-            <form onSubmit={submit}>
-              <textarea
-                rows={8}
-                value={rosterText}
-                onChange={(e) => setRosterText(e.target.value)}
-                placeholder="One player name per line&#10;&#10;Aaron Judge&#10;Shohei Ohtani&#10;Mookie Betts&#10;..."
-                className="w-full bg-transparent px-4 py-3 text-[13px] font-mono text-gray-200 placeholder:text-muted/30 resize-y focus:outline-none min-h-[200px]"
-              />
+          {/* Unresolved names */}
+          {data.unresolved && data.unresolved.length > 0 && (
+            <div className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 mb-4">
+              <p className="text-sm text-accent">
+                Couldn&apos;t match: <span className="font-medium">{data.unresolved.join(", ")}</span>. Fix spelling or remove the line.
+              </p>
+            </div>
+          )}
 
-              <div className="px-4 pb-4 space-y-3">
+          {/* Empty results */}
+          {data.recommendations.length === 0 ? (
+            <div className="text-center py-20 rounded-xl border border-line/50 bg-card/50">
+              <span className="text-4xl block mb-3">🎉</span>
+              <p className="text-sm font-semibold mb-1">Your roster is stacked</p>
+              <p className="text-xs text-muted">No free agents outrank your current players this week.</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {data.recommendations.map((r, i) => (
+                <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={sport} />
+              ))}
+            </div>
+          )}
+
+          {/* Re-analyze bar */}
+          <div className="mt-8 rounded-xl border border-line/50 bg-card/60 p-4">
+            <form onSubmit={submit} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-muted font-medium mb-1 block">Edit roster</label>
+                <textarea
+                  rows={3}
+                  value={rosterText}
+                  onChange={(e) => setRosterText(e.target.value)}
+                  className="w-full bg-surface/50 border border-line/50 rounded-lg px-3 py-2 text-[13px] font-mono text-gray-200 placeholder:text-muted/30 resize-y focus:outline-none focus:border-accent/40"
+                />
+              </div>
+              <div className="flex gap-2 sm:flex-col">
                 <ModeToggle mode={mode} onChange={handleModeChange} sport={sport} />
-
                 <button
                   type="submit"
                   disabled={loading || !rosterText.trim()}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-sm font-semibold text-bg transition-all hover:brightness-110 hover:shadow-lg hover:shadow-accent/25 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:brightness-100"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg hover:brightness-110 transition-all disabled:opacity-40"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 size={15} className="animate-spin" /> Analyzing…
-                    </>
-                  ) : (
-                    <>
-                      <Search size={15} /> Rank waiver adds
-                    </>
-                  )}
+                  {loading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                  Re-analyze
                 </button>
               </div>
             </form>
           </div>
         </div>
-
-        {/* Right: Results */}
-        <div className="lg:col-span-8">
-          {/* Error */}
-          {error && (
-            <div className="rounded-xl border border-neg/30 bg-neg/5 px-4 py-4 mb-5 animate-fade-in">
-              <p className="text-sm text-neg">{error}</p>
-            </div>
-          )}
-
-          {/* Loading skeleton */}
-          {loading && !data && (
-            <div className="space-y-3 animate-fade-in">
-              {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
-            </div>
-          )}
-
-          {/* Empty state before results */}
-          {!data && !loading && !error && (
-            <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-              <div className="h-16 w-16 rounded-2xl bg-surface/80 flex items-center justify-center mb-4">
-                <Search size={28} className="text-muted/40" />
-              </div>
-              <h3 className="text-sm font-semibold text-muted mb-1">No results yet</h3>
-              <p className="text-xs text-muted/60 max-w-xs">
-                Paste your roster on the left and hit &ldquo;Rank waiver adds&rdquo; to see personalized recommendations.
-              </p>
-            </div>
-          )}
-
-          {/* Results */}
-          {data && !loading && (
-            <div className="animate-fade-in">
-              {/* Results header */}
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-bold flex items-center gap-2">
-                    <Plus size={16} className="text-accent" />
-                    Waiver Action List
-                  </h2>
-                  <p className="text-xs text-muted mt-0.5 flex items-center gap-1.5">
-                    <Calendar size={10} />
-                    {formatDate(data.week.start)} – {formatDate(data.week.end)}
-                    {typeof data.resolved_count === "number" && (
-                      <> · {data.resolved_count} matched</>
-                    )}
-                    {data.scoring_mode === "categories" && (
-                      <> · <span className="text-accent font-medium">{getCatLabel(sport)} z-score</span></>
-                    )}
-                  </p>
-                </div>
-                <span className="text-xs text-muted bg-surface/80 px-2.5 py-1 rounded-md font-medium tabular-nums">
-                  {data.recommendations.length} add{data.recommendations.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-
-              {/* Unresolved names */}
-              {data.unresolved && data.unresolved.length > 0 && (
-                <div className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 mb-4">
-                  <p className="text-sm text-accent">
-                    Couldn&apos;t match: <span className="font-medium">{data.unresolved.join(", ")}</span>. Fix spelling or remove the line.
-                  </p>
-                </div>
-              )}
-
-              {/* Empty results */}
-              {data.recommendations.length === 0 ? (
-                <div className="text-center py-20 rounded-xl border border-line/50 bg-card/50">
-                  <span className="text-4xl block mb-3">🎉</span>
-                  <p className="text-sm font-semibold mb-1">Your roster is stacked</p>
-                  <p className="text-xs text-muted">No free agents outrank your current players this week.</p>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {data.recommendations.map((r, i) => (
-                    <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={sport} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
+      )}
     </main>
   );
+}
+
+export default function SportDashboard() {
+  return <Suspense><DashboardContent /></Suspense>;
 }
