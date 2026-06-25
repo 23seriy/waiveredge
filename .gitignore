@@ -37,5 +37,3 @@ k8s/localhost.key
 backend/sample_data_nba/*.json
 backend/sample_data_mlb/*.json
 backend/sample_data_wnba/*.json
-
-.

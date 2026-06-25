@@ -5,6 +5,7 @@ metadata:
   name: backend-config
   namespace: waiveredge
 data:
+  # Local minikube dev credentials only — never use in production.
   DATABASE_URL: "postgresql+psycopg2://waiveredge:waiveredge@postgres:5432/waiveredge"
   CORS_ORIGINS: "http://localhost:3000,http://frontend.waiveredge.svc.cluster.local:3000"
   APP_SECRET: "minikube-dev-secret"
