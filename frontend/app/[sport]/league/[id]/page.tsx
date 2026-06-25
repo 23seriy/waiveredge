@@ -248,7 +248,7 @@ export default function LeaguePage() {
   const leagueSport = league?.sport ?? sport;
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8">
+    <main className="mx-auto px-6 md:px-12 lg:px-20 py-8">
       {loading && <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-accent" /><span className="ml-2 text-muted">Loading…</span></div>}
       {error === "__paywall__" && (
         <div className="rounded-xl border-2 border-accent bg-accent/5 p-6 text-center mb-6">

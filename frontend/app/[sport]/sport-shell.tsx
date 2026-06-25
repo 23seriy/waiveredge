@@ -101,7 +101,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-bg flex flex-col">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
@@ -141,7 +141,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
       <div className="flex-1">{children}</div>
 
       <footer className="border-t border-line/50 bg-card/30 mt-16">
-        <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2 text-muted hover:text-gray-300 transition-colors">
               <div className="h-5 w-5 rounded bg-accent/70 flex items-center justify-center">

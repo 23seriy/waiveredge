@@ -66,7 +66,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-bg">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
               <Zap size={18} className="text-bg" />
@@ -88,7 +88,7 @@ export default function Home() {
         {/* Hero */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(240,136,62,0.08)_0%,_transparent_60%)] pointer-events-none" />
-          <div className="max-w-3xl mx-auto px-4 pt-20 pb-16 md:pt-28 md:pb-20 text-center relative">
+          <div className="mx-auto px-6 md:px-12 lg:px-20 pt-20 pb-16 md:pt-28 md:pb-20 text-center relative">
             <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-4 py-1.5 text-xs font-medium text-accent mb-6 animate-fade-in">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-pos opacity-75 animate-ping" />
@@ -129,7 +129,7 @@ export default function Home() {
         </section>
 
         {/* Sport picker */}
-        <section ref={sportSectionRef} className="max-w-3xl mx-auto px-4 pb-16">
+        <section ref={sportSectionRef} className="mx-auto px-6 md:px-12 lg:px-20 pb-16">
           <h2 className="text-lg font-bold text-center mb-2">
             Pick your sport
           </h2>
@@ -137,7 +137,7 @@ export default function Home() {
             Choose a league — you can switch anytime from the header.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {SPORTS.map((sport, i) => (
               <Link
                 key={sport.key}
@@ -188,7 +188,7 @@ export default function Home() {
 
         {/* Value props */}
         <section className="border-t border-line/50 bg-surface/30">
-          <div className="max-w-4xl mx-auto px-4 py-16">
+          <div className="mx-auto px-6 md:px-12 lg:px-20 py-16">
             <h2 className="text-xl font-bold text-center mb-2">How it works</h2>
             <p className="text-sm text-muted text-center mb-10 max-w-md mx-auto">
               Paste your roster or connect your league. We do the math in seconds.
@@ -209,7 +209,7 @@ export default function Home() {
 
         {/* Trust bar */}
         <section className="border-t border-line/50">
-          <div className="max-w-3xl mx-auto px-4 py-10 text-center">
+          <div className="mx-auto px-6 md:px-12 lg:px-20 py-10 text-center">
             <div className="inline-flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted">
               <span className="flex items-center gap-1.5"><Shield size={14} className="text-accent" /> Read-only access</span>
               <span className="text-line hidden sm:inline">|</span>
@@ -224,7 +224,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-line/50 bg-card/40">
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="mx-auto px-6 md:px-12 lg:px-20 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded bg-accent/80 flex items-center justify-center">
