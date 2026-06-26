@@ -286,6 +286,35 @@ def _sync_yahoo(conn: LeagueConnection, db: Session) -> dict:
             "roster_size": len(resolved_ids), "free_agents_found": len(fa_ids)}
 
 
+def _refresh_yahoo_free_agents(conn: LeagueConnection, fx: dict, db: Session) -> list[int]:
+    """Re-fetch free agents from Yahoo so recs use current data."""
+    if not conn.oauth_tokens:
+        return []
+    try:
+        yc = YahooFantasyClient(conn.oauth_tokens)
+        yahoo_fas = yc.free_agents(conn.league_id, max_players=500)
+        if yc.tokens_refreshed:
+            conn.oauth_tokens = yc.current_tokens
+        fa_names = [p["name"] for p in yahoo_fas]
+        fa_ids, _ = resolve_names(fa_names, fx["players"])
+        # Update stored FA IDs + keys for transaction support.
+        scoring_data = dict(conn.scoring_json or {})
+        scoring_data["free_agent_ids"] = fa_ids
+        fa_by_name = {p["name"]: p for p in yahoo_fas}
+        fa_keys: dict[int, str] = {}
+        for p in fx["players"]:
+            fa_info = fa_by_name.get(p["name"])
+            if fa_info and fa_info.get("player_key") and p["id"] in fa_ids:
+                fa_keys[p["id"]] = fa_info["player_key"]
+        scoring_data["free_agent_keys"] = fa_keys
+        conn.scoring_json = scoring_data
+        db.commit()
+        return fa_ids
+    except Exception:
+        # Fall back to stored FA IDs if refresh fails.
+        return list(conn.scoring_json.get("free_agent_ids", []) if conn.scoring_json else [])
+
+
 @router.get("/{connection_id}/recs")
 def league_recommendations(connection_id: int, db: Session = Depends(get_db)) -> dict:
     """Personalized recommendations for a connected league."""
@@ -300,13 +329,17 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
     cfg = fx["roster"]
 
     roster_ids = {r.player_id for r in roster_entries}
-    # Use actual league free agents if available (from last sync), else fall back to all non-rostered.
-    scoring_data = conn.scoring_json or {}
-    stored_fa_ids = scoring_data.get("free_agent_ids")
-    if stored_fa_ids:
-        free_agents = [pid for pid in stored_fa_ids if pid not in roster_ids]
+    # Re-fetch free agents from the platform so recs reflect current availability.
+    if conn.platform == "yahoo":
+        fresh_fa_ids = _refresh_yahoo_free_agents(conn, fx, db)
+        free_agents = [pid for pid in fresh_fa_ids if pid not in roster_ids]
     else:
-        free_agents = [p["id"] for p in fx["players"] if p["id"] not in roster_ids]
+        scoring_data = conn.scoring_json or {}
+        stored_fa_ids = scoring_data.get("free_agent_ids")
+        if stored_fa_ids:
+            free_agents = [pid for pid in stored_fa_ids if pid not in roster_ids]
+        else:
+            free_agents = [p["id"] for p in fx["players"] if p["id"] not in roster_ids]
     droppable = [r.player_id for r in roster_entries if r.droppable]
 
     scoring = conn.scoring_json or {}
