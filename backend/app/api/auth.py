@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from ..config import settings
+from ..config import safe_redirect_url, settings
 from ..data.yahoo import GAME_KEY, YahooFantasyClient, authorization_url, exchange_code
 from ..db import get_db
 from ..models import LeagueConnection, User
@@ -55,7 +55,7 @@ def yahoo_callback(code: str = Query(...), state: str = Query(""), db: Session =
     yc = YahooFantasyClient(tokens)
     leagues = yc.user_leagues(game_key=game_key)
     if not leagues:
-        return RedirectResponse(f"{settings.frontend_url}/{game_key}/connect?error=no_leagues")
+        return RedirectResponse(safe_redirect_url(f"{settings.frontend_url}/{game_key}/connect?error=no_leagues"))
 
     # For v1 we auto-pick the first NBA league.
     league = leagues[0]
@@ -102,4 +102,4 @@ def yahoo_callback(code: str = Query(...), state: str = Query(""), db: Session =
     connection_id = conn.id
     db.commit()
 
-    return RedirectResponse(f"{settings.frontend_url}/{game_key}/league/{connection_id}")
+    return RedirectResponse(safe_redirect_url(f"{settings.frontend_url}/{game_key}/league/{connection_id}"))

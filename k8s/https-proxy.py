@@ -33,8 +33,16 @@ class ProxyHandler(BaseHTTPRequestHandler):
         resp = conn.getresponse()
         self.send_response(resp.status)
         for key, val in resp.getheaders():
-            if key.lower() not in ("transfer-encoding",):
-                self.send_header(key, val)
+            # Sanitize/validate header names and values to prevent response splitting.
+            safe_key = key.replace("\r", "").replace("\n", "")
+            if (
+                safe_key
+                and ":" not in safe_key
+                and safe_key.strip() == safe_key
+                and safe_key.lower() not in ("transfer-encoding",)
+            ):
+                safe_val = val.replace("\r", "").replace("\n", "")
+                self.send_header(safe_key, safe_val)
         self.end_headers()
         self.wfile.write(resp.read())
 
@@ -57,6 +65,7 @@ def main():
         ], check=True)
 
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.load_cert_chain(str(cert), str(key))
 
     server = HTTPServer(("0.0.0.0", LISTEN_PORT), ProxyHandler)

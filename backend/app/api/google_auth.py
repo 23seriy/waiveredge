@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from ..config import settings
+from ..config import safe_redirect_url, settings
 from ..db import get_db
 from ..models import User
 
@@ -169,7 +169,7 @@ def google_callback(code: str = Query(...), db: Session = Depends(get_db)):
 
     # Generate token and redirect to frontend with it in the URL.
     token = _make_token(user)
-    return RedirectResponse(f"{settings.frontend_url}/auth/callback?token={token}")
+    return RedirectResponse(safe_redirect_url(f"{settings.frontend_url}/auth/callback?token={token}"))
 
 
 @router.get("/me")
