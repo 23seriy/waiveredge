@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { useLeagues } from "../components/league-context";
 
 type Sport = "nba" | "mlb" | "wnba";
 type ScoringMode = "points" | "categories";
@@ -384,6 +385,7 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const sport = (params.sport as Sport) || "nba";
   const source = searchParams.get("source");
+  const { activeLeague, loading: leagueCtxLoading } = useLeagues();
 
   const [rosterText, setRosterText] = useState("");
   const [mode, setMode] = useState<ScoringMode>("points");
@@ -391,6 +393,41 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const autoSubmitted = useRef(false);
+  const leagueLoaded = useRef<number | null>(null);
+
+  // Auto-load recommendations from connected league
+  const fetchLeagueRecs = useCallback(async (connectionId: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/recs`);
+      if (res.status === 402) {
+        setError("__paywall__");
+        setData(null);
+      } else if (res.ok) {
+        setData((await res.json()) as Payload);
+      } else {
+        const rb = await res.json().catch(() => null);
+        const detail = rb?.detail;
+        setError(typeof detail === "string" ? detail : `Recommendations failed (${res.status})`);
+        setData(null);
+      }
+    } catch {
+      setError("Could not reach the server. Check that the backend is running.");
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // When a connected league is present, auto-load its recs
+  useEffect(() => {
+    if (leagueCtxLoading) return;
+    if (activeLeague && leagueLoaded.current !== activeLeague.id) {
+      leagueLoaded.current = activeLeague.id;
+      fetchLeagueRecs(activeLeague.id);
+    }
+  }, [activeLeague, leagueCtxLoading, fetchLeagueRecs]);
 
   const fetchRecommendations = useCallback(async (roster: string[], scoringMode: ScoringMode) => {
     setLoading(true);
@@ -450,6 +487,7 @@ function DashboardContent() {
     }
     setData(null);
     autoSubmitted.current = false;
+    leagueLoaded.current = null;
   }, [sport]);
 
   // Auto-submit when arriving from connect page with ?source=manual
@@ -507,8 +545,8 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Empty state — direct to connect page */}
-      {!data && !loading && !error && (
+      {/* Empty state — direct to connect page (only when no league connected) */}
+      {!data && !loading && !error && !leagueCtxLoading && !activeLeague && (
         <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
           <div className="h-16 w-16 rounded-2xl bg-surface/80 flex items-center justify-center mb-5">
             <Search size={28} className="text-muted/40" />
@@ -544,6 +582,9 @@ function DashboardContent() {
                 )}
                 {data.scoring_mode === "categories" && (
                   <> · <span className="text-accent font-medium">{getCatLabel(sport)} z-score</span></>
+                )}
+                {activeLeague && (
+                  <> · <Link href={`/${sport}/league/${activeLeague.id}`} className="text-pos hover:underline">{activeLeague.platform.toUpperCase()} league</Link></>
                 )}
               </p>
             </div>
