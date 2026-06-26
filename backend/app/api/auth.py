@@ -34,6 +34,7 @@ def list_sports() -> list[dict]:
 
 
 _VALID_SPORTS = {"nba", "mlb", "nfl", "nhl", "wnba"}
+_SPORT_STATE_MAP = {k: k for k in _VALID_SPORTS}
 
 
 @router.get("/yahoo")
@@ -41,8 +42,8 @@ def yahoo_login(sport: str = ""):
     """Redirect the user to Yahoo's OAuth consent page."""
     if not settings.yahoo_client_id:
         raise HTTPException(status_code=503, detail="Yahoo OAuth is not configured.")
-    # Validate sport against allowlist to prevent open redirect via state param.
-    safe_sport = sport if sport in _VALID_SPORTS else GAME_KEY
+    # Canonicalize sport through a server-side map before sending as OAuth state.
+    safe_sport = _SPORT_STATE_MAP.get(sport, GAME_KEY)
     return RedirectResponse(authorization_url(state=safe_sport))
 
 

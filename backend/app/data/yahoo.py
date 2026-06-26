@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 
@@ -35,8 +36,7 @@ def authorization_url(state: str = "") -> str:
     }
     if state:
         params["state"] = state
-    qs = "&".join(f"{k}={v}" for k, v in params.items())
-    return f"{AUTH_URL}?{qs}"
+    return f"{AUTH_URL}?{urlencode(params)}"
 
 
 def exchange_code(code: str) -> dict:
