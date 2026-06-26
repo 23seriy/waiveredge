@@ -33,10 +33,16 @@ class ProxyHandler(BaseHTTPRequestHandler):
         resp = conn.getresponse()
         self.send_response(resp.status)
         for key, val in resp.getheaders():
-            if key.lower() not in ("transfer-encoding",):
-                # Sanitize header values to prevent HTTP response splitting.
+            # Sanitize/validate header names and values to prevent response splitting.
+            safe_key = key.replace("\r", "").replace("\n", "")
+            if (
+                safe_key
+                and ":" not in safe_key
+                and safe_key.strip() == safe_key
+                and safe_key.lower() not in ("transfer-encoding",)
+            ):
                 safe_val = val.replace("\r", "").replace("\n", "")
-                self.send_header(key, safe_val)
+                self.send_header(safe_key, safe_val)
         self.end_headers()
         self.wfile.write(resp.read())
 
