@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { ArrowRight, ChevronDown, ExternalLink, Link2, Loader2, Plus, RotateCcw, Search, Trash2, Trophy, Users } from "lucide-react";
 import Link from "next/link";
+import { useLeagues } from "../../components/league-context";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_BASE || API_BASE;
@@ -303,21 +304,23 @@ function ConnectContent() {
   const meta = SPORT_META[sport] || { name: sport.toUpperCase(), icon: "🏅", full: sport.toUpperCase(), sample: "" };
   const error = searchParams.get("error");
   const [savedLeagues, setSavedLeagues] = useState<SavedLeague[]>([]);
+  const { refreshLeagues: refreshCtxLeagues } = useLeagues();
 
   const refreshLeagues = useCallback(() => {
     const ids = getSavedLeagueIds(sport);
     if (ids.length === 0) { setSavedLeagues([]); return; }
     fetch(`${API_BASE}/api/leagues?ids=${ids.join(",")}`)
       .then((r) => r.ok ? r.json() : [])
-      .then((data) => setSavedLeagues(data))
+      .then((data) => { setSavedLeagues(data); refreshCtxLeagues(); })
       .catch(() => setSavedLeagues([]));
-  }, [sport]);
+  }, [sport, refreshCtxLeagues]);
 
   useEffect(() => { refreshLeagues(); }, [refreshLeagues]);
 
   function handleRemove(id: number) {
     removeLeagueId(sport, id);
     setSavedLeagues((prev) => prev.filter((l) => l.id !== id));
+    refreshCtxLeagues();
   }
 
   return (

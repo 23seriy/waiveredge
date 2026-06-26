@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, Flame, LayoutDashboard, LogOut, TrendingUp, Zap } from "lucide-react";
+import { ChevronDown, Flame, LayoutDashboard, Link2, LogOut, TrendingUp, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAuthUser } from "../components/auth-header";
+import { LeagueProvider, useLeagues } from "../components/league-context";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
@@ -137,6 +138,30 @@ function SportSwitcher({ currentSport, pathname }: { currentSport: string; pathn
   );
 }
 
+function LeagueIndicator({ sport }: { sport: string }) {
+  const { activeLeague } = useLeagues();
+  if (!activeLeague) {
+    return (
+      <Link
+        href={`/${sport}/connect`}
+        className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg text-muted hover:text-gray-200 hover:bg-surface transition-colors"
+      >
+        <Link2 size={14} /> <span className="hidden sm:inline">Connect</span>
+      </Link>
+    );
+  }
+  return (
+    <Link
+      href={`/${sport}/league/${activeLeague.id}`}
+      className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg text-pos/80 hover:text-pos hover:bg-pos/10 transition-colors"
+    >
+      <Link2 size={14} />
+      <span className="hidden sm:inline">{activeLeague.platform.toUpperCase()}</span>
+    </Link>
+  );
+}
+
+
 export default function SportShell({ children }: { children: ReactNode }) {
   const params = useParams();
   const pathname = usePathname();
@@ -162,6 +187,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
   }
 
   return (
+    <LeagueProvider sport={sport}>
     <div className="min-h-screen bg-bg flex flex-col">
       <header className="border-b border-line/50 bg-bg/80 backdrop-blur-md sticky top-0 z-20">
         <div className="mx-auto px-6 md:px-12 lg:px-20 py-3 flex items-center justify-between">
@@ -200,6 +226,7 @@ export default function SportShell({ children }: { children: ReactNode }) {
             >
               <TrendingUp size={14} /> <span className="hidden sm:inline">Top Available</span>
             </Link>
+            <LeagueIndicator sport={sport} />
             <Link href="/pricing" className="text-sm px-3 py-1.5 rounded-lg text-muted hover:text-gray-200 hover:bg-surface transition-colors">
               Pricing
             </Link>
@@ -232,5 +259,6 @@ export default function SportShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
     </div>
+    </LeagueProvider>
   );
 }
