@@ -1,6 +1,8 @@
 """Application settings, read from the environment (12-factor)."""
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -50,3 +52,27 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def safe_redirect_url(path: str) -> str:
+    """Build a redirect URL validated against allowed origins.
+
+    Prevents open-redirect attacks by ensuring the target host matches
+    frontend_url or one of the CORS origins.
+    """
+    parsed = urlparse(path)
+    # Relative paths are always safe.
+    if not parsed.scheme and not parsed.netloc:
+        return path
+
+    allowed_origins = {settings.frontend_url.rstrip("/")}
+    for origin in settings.cors_origins.split(","):
+        origin = origin.strip()
+        if origin:
+            allowed_origins.add(origin.rstrip("/"))
+
+    target_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+    if target_origin not in allowed_origins:
+        # Fall back to frontend_url with the original path.
+        return f"{settings.frontend_url.rstrip('/')}{parsed.path}"
+    return path
