@@ -163,12 +163,31 @@ def explain_recommendation(rec: dict) -> dict:
 
 @app.get("/api/streamers")
 @limiter.limit("30/minute")
-def streamers(request: Request, top: int = 30, sport: str = "nba") -> dict:
-    """Top streaming pickups this week + schedule density grid. No auth required."""
+def streamers(request: Request, top: int = 30, sport: str = "nba", connection_id: int | None = None) -> dict:
+    """Top streaming pickups this week + schedule density grid.
+
+    When ``connection_id`` is provided, results are filtered to only free agents
+    in that connected league.  Otherwise all known players are ranked.
+    """
     sc = get_sport(sport)
     if not sc.has_data:
         raise HTTPException(status_code=501, detail=f"{sc.name} data pipeline not yet available.")
-    return {**top_streamers(top_n=min(top, 50), sport=sport), "sport": sport}
+
+    league_fa_ids: set[int] | None = None
+    if connection_id is not None:
+        from .db import SessionLocal
+        from .models import LeagueConnection
+        db = SessionLocal()
+        try:
+            conn = db.query(LeagueConnection).filter(LeagueConnection.id == connection_id).first()
+            if conn:
+                scoring = conn.scoring_json or {}
+                stored = scoring.get("free_agent_ids", [])
+                league_fa_ids = set(stored) if stored else None
+        finally:
+            db.close()
+
+    return {**top_streamers(top_n=min(top, 50), sport=sport, league_fa_ids=league_fa_ids), "sport": sport}
 
 
 # TODO: @app.get("/api/recommendations/{connection_id}") — DB-backed, per-user.

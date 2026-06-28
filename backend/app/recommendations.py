@@ -442,11 +442,12 @@ def sample_recommendations(scoring_mode: str = "points", sport: str = "nba") -> 
     }
 
 
-def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
+def top_streamers(top_n: int = 30, sport: str = "nba", league_fa_ids: set[int] | None = None) -> dict:
     """Top streaming pickups this week ranked by absolute projected value.
 
     No roster required — this is the public, free, SEO-friendly page content.
     Returns the schedule density grid (games per team) and the ranked player list.
+    When ``league_fa_ids`` is provided, only players in that set are considered.
     """
     fx = load_fixtures(sport)
     cfg = fx["roster"]
@@ -490,7 +491,7 @@ def top_streamers(top_n: int = 30, sport: str = "nba") -> dict:
     schedule_by_id = {g.id: g for g in schedule}
 
     # Only rank free agents (players not on any roster).
-    free_agent_ids = set(cfg.get("free_agents", []))
+    free_agent_ids = league_fa_ids if league_fa_ids is not None else set(cfg.get("free_agents", []))
     ranked: list[dict] = []
     for p in players.values():
         if free_agent_ids and p.id not in free_agent_ids:

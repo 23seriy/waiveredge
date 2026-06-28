@@ -9,7 +9,10 @@ import {
   Flame,
   Loader2,
   TrendingUp,
+  Users,
+  Globe,
 } from "lucide-react";
+import { useLeagues } from "../../components/league-context";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
@@ -369,20 +372,32 @@ function SkeletonTable() {
 }
 
 
+type ViewMode = "all" | "league";
+
 export default function TopAvailablePage() {
   const params = useParams();
   const sport = params.sport as string;
+  const { activeLeague, loading: leagueLoading } = useLeagues();
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("projections");
   const [showCount, setShowCount] = useState(30);
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
+
+  // Auto-switch to league mode when a league is connected
+  useEffect(() => {
+    if (!leagueLoading && activeLeague) {
+      setViewMode("league");
+    }
+  }, [activeLeague, leagueLoading]);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     setData(null);
-    fetch(`${API_BASE}/api/streamers?top=50&sport=${sport}`)
+    const connectionParam = viewMode === "league" && activeLeague ? `&connection_id=${activeLeague.id}` : "";
+    fetch(`${API_BASE}/api/streamers?top=50&sport=${sport}${connectionParam}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(`API error ${res.status}`);
         return res.json();
@@ -390,7 +405,7 @@ export default function TopAvailablePage() {
       .then((d) => setData(d as Payload))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [sport]);
+  }, [sport, viewMode, activeLeague]);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "projections", label: "Projections" },
@@ -422,8 +437,38 @@ export default function TopAvailablePage() {
         )}
       </div>
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 mb-5 bg-surface/50 rounded-lg p-1 w-fit">
+      {/* View mode toggle + Tab bar */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        {activeLeague && (
+          <div className="flex items-center gap-1 bg-surface/50 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("all")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                viewMode === "all"
+                  ? "bg-card text-gray-100 shadow-sm border border-line/50"
+                  : "text-muted hover:text-gray-200"
+              }`}
+            >
+              <Globe size={13} />
+              All Players
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("league")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                viewMode === "league"
+                  ? "bg-accent text-bg shadow-sm"
+                  : "text-muted hover:text-gray-200"
+              }`}
+            >
+              <Users size={13} />
+              My League FAs
+            </button>
+          </div>
+        )}
+
+      <div className="flex items-center gap-1 bg-surface/50 rounded-lg p-1 w-fit">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -438,6 +483,7 @@ export default function TopAvailablePage() {
             {t.label}
           </button>
         ))}
+      </div>
       </div>
 
       {/* Error */}
