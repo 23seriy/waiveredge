@@ -10,6 +10,8 @@ Flow:
 """
 from __future__ import annotations
 
+from datetime import date
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -23,9 +25,22 @@ from ..recommendations import build_espn_id_map, load_fixtures, resolve_names
 router = APIRouter(prefix="/api/espn", tags=["espn"])
 
 
+def _current_espn_season(sport: str) -> int:
+    """Compute the current ESPN season year for a sport.
+
+    NBA spans two calendar years — the season year is the *end* year
+    (e.g. the 2025-26 season is ``2026``).  MLB and WNBA run within a
+    single calendar year.
+    """
+    today = date.today()
+    if sport == "nba":
+        return today.year + 1 if today.month >= 7 else today.year
+    return today.year
+
+
 class ESPNConnectRequest(BaseModel):
     league_id: int = Field(..., description="ESPN league ID (from the URL)")
-    season: int = Field(default=2026, description="Season year")
+    season: int | None = Field(default=None, description="Season year (auto-detected if omitted)")
     sport: str = Field(default="mlb", description="Sport key (nba, mlb)")
     team_id: int | None = Field(default=None, description="Your team ID in the league (pick from /api/espn/teams)")
     espn_s2: str = Field(default="", description="espn_s2 cookie (for private leagues)")
@@ -33,11 +48,12 @@ class ESPNConnectRequest(BaseModel):
 
 
 @router.get("/teams")
-def espn_teams(league_id: int, season: int = 2026, sport: str = "mlb") -> list[dict]:
+def espn_teams(league_id: int, season: int | None = None, sport: str = "mlb") -> list[dict]:
     """List all teams in an ESPN league (no auth needed for public leagues)."""
+    effective_season = season if season is not None else _current_espn_season(sport)
     client = ESPNFantasyClient(sport=sport)
     try:
-        return client.teams(league_id, season)
+        return client.teams(league_id, effective_season)
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 404:
             sport_name = sport.upper()
@@ -54,11 +70,12 @@ def espn_teams(league_id: int, season: int = 2026, sport: str = "mlb") -> list[d
 @router.post("/connect")
 def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict:
     """Connect an ESPN Fantasy league."""
+    effective_season = req.season if req.season is not None else _current_espn_season(req.sport)
     client = ESPNFantasyClient(sport=req.sport, espn_s2=req.espn_s2, swid=req.swid)
 
     # Verify the league exists by fetching settings.
     try:
-        settings = client.settings(req.league_id, req.season)
+        settings = client.settings(req.league_id, effective_season)
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 404:
             sport_name = req.sport.upper()
@@ -74,13 +91,13 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
     # Find the user's team: explicit team_id > cookie-based detection.
     team_id = req.team_id
     if team_id is None:
-        team_id = client.my_team_id(req.league_id, req.season)
+        team_id = client.my_team_id(req.league_id, effective_season)
 
     # Fetch roster if we found the team.
     roster_data = []
     if team_id is not None:
         try:
-            roster_data = client.roster(req.league_id, req.season, team_id)
+            roster_data = client.roster(req.league_id, effective_season, team_id)
         except httpx.HTTPStatusError as exc:
             raise HTTPException(status_code=502, detail=f"ESPN roster fetch failed ({exc.response.status_code}).") from exc
         except Exception as exc:
@@ -88,7 +105,7 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
 
     # Fetch free agents.
     try:
-        fas = client.free_agents(req.league_id, req.season, count=200)
+        fas = client.free_agents(req.league_id, effective_season, count=200)
     except Exception:
         fas = []
 
@@ -132,7 +149,7 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
         "swid": req.swid,
         "espn_league_id": req.league_id,
         "espn_team_id": team_id,
-        "season": req.season,
+        "season": effective_season,
     }
 
     if conn:

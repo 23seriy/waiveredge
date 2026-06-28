@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Crown, Loader2, Zap } from "lucide-react";
-import { useAuthUser } from "../components/auth-header";
+import { getAuthHeaders, useAuthUser } from "../components/auth-header";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 type Plan = "monthly" | "season";
@@ -38,8 +38,8 @@ export default function PricingPage() {
       }
       const res = await fetch(`${API_BASE}/api/billing/checkout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: user.id, plan }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ plan }),
       });
       if (!res.ok) {
         const b = await res.json().catch(() => null);
