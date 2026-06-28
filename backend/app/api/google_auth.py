@@ -17,8 +17,10 @@ import json
 import time
 from urllib.parse import urlencode
 
+import bcrypt
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from pydantic import BaseModel
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -90,6 +92,77 @@ def require_user(user: User | None = Depends(get_current_user)) -> User:
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
+
+
+# --- Password helpers ---
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def _check_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode(), hashed.encode())
+
+
+# --- Email/password models ---
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    name: str = ""
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+# --- Email/password endpoints ---
+
+@router.post("/signup")
+def signup(req: SignupRequest, db: Session = Depends(get_db)):
+    """Create a new account with email and password."""
+    email = req.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="A valid email is required.")
+    if len(req.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+
+    existing = db.query(User).filter(User.email == email).first()
+    if existing and existing.password_hash:
+        raise HTTPException(status_code=409, detail="An account with this email already exists.")
+
+    if existing:
+        # User exists from OAuth but has no password — allow setting one.
+        existing.password_hash = _hash_password(req.password)
+        if req.name and not existing.name:
+            existing.name = req.name
+        db.commit()
+        token = _make_token(existing)
+        return {"token": token, "user": {"id": existing.id, "email": existing.email, "name": existing.name}}
+
+    user = User(
+        email=email,
+        password_hash=_hash_password(req.password),
+        name=req.name.strip() or email.split("@")[0],
+    )
+    db.add(user)
+    db.commit()
+    token = _make_token(user)
+    return {"token": token, "user": {"id": user.id, "email": user.email, "name": user.name}}
+
+
+@router.post("/login")
+def login(req: LoginRequest, db: Session = Depends(get_db)):
+    """Sign in with email and password."""
+    email = req.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not user.password_hash:
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    if not _check_password(req.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    token = _make_token(user)
+    return {"token": token, "user": {"id": user.id, "email": user.email, "name": user.name}}
 
 
 # --- Endpoints ---

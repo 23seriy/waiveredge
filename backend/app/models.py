@@ -90,6 +90,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(256), unique=True, index=True)
     google_id: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
+    password_hash: Mapped[str | None] = mapped_column(String(128))
     name: Mapped[str | None] = mapped_column(String(256))
     picture: Mapped[str | None] = mapped_column(String(512))
     tier: Mapped[str] = mapped_column(String(16), default="free")  # free | pro
