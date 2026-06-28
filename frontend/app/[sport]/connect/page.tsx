@@ -68,7 +68,7 @@ function ESPNConnectForm({ sport, onConnected }: { sport: string; onConnected: (
     setTeams([]);
     setSelectedTeam(null);
     try {
-      const res = await fetch(`${API_BASE}/api/espn/teams?league_id=${leagueId}&season=2026&sport=${sport}`);
+      const res = await fetch(`${API_BASE}/api/espn/teams?league_id=${leagueId}&sport=${sport}`);
       if (!res.ok) { const b = await res.json().catch(() => null); setResult(b?.detail || "Failed to load teams"); return; }
       const data = (await res.json()) as ESPNTeam[];
       setTeams(data);
@@ -87,7 +87,6 @@ function ESPNConnectForm({ sport, onConnected }: { sport: string; onConnected: (
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           league_id: parseInt(leagueId),
-          season: 2026,
           sport,
           team_id: selectedTeam,
           espn_s2: espnS2,

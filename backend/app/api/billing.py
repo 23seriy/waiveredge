@@ -14,26 +14,23 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..db import get_db
 from ..models import User
+from .google_auth import get_current_user, require_user
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 
 class CheckoutRequest(BaseModel):
-    user_id: int
     plan: str = "monthly"  # monthly | season
 
 
 @router.post("/checkout")
-def create_checkout(req: CheckoutRequest, db: Session = Depends(get_db)) -> dict:
+def create_checkout(req: CheckoutRequest, user: User = Depends(require_user)) -> dict:
     """Create a Stripe Checkout session for Pro subscription."""
     if not settings.stripe_secret_key:
         raise HTTPException(status_code=503, detail="Stripe is not configured.")
 
     stripe.api_key = settings.stripe_secret_key
 
-    user = db.query(User).filter(User.id == req.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
     if user.tier == "pro":
         raise HTTPException(status_code=400, detail="Already on Pro.")
 
@@ -63,12 +60,9 @@ def create_checkout(req: CheckoutRequest, db: Session = Depends(get_db)) -> dict
     return {"checkout_url": session.url, "session_id": session.id}
 
 
-@router.get("/status/{user_id}")
-def billing_status(user_id: int, db: Session = Depends(get_db)) -> dict:
-    """Return the current billing status for a user."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
+@router.get("/status")
+def billing_status(user: User = Depends(require_user)) -> dict:
+    """Return the current billing status for the authenticated user."""
     return {"user_id": user.id, "tier": user.tier, "has_subscription": bool(user.stripe_subscription_id)}
 
 
