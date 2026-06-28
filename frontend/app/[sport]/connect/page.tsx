@@ -172,7 +172,7 @@ function ESPNConnectForm({ sport, onConnected }: { sport: string; onConnected: (
         <button
           onClick={handleConnect}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors disabled:opacity-40"
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg hover:brightness-110 transition-colors disabled:opacity-40"
         >
           {loading ? <><Loader2 size={14} className="animate-spin" /> Connecting…</> : "Connect ESPN League"}
         </button>
