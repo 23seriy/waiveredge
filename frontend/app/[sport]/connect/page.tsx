@@ -311,7 +311,7 @@ function ConnectContent() {
     if (ids.length === 0) { setSavedLeagues([]); return; }
     fetch(`${API_BASE}/api/leagues?ids=${ids.join(",")}`)
       .then((r) => r.ok ? r.json() : [])
-      .then((data) => { setSavedLeagues(data); refreshCtxLeagues(); })
+      .then((data: SavedLeague[]) => { setSavedLeagues(data.filter((l) => l.sport === sport)); refreshCtxLeagues(); })
       .catch(() => setSavedLeagues([]));
   }, [sport, refreshCtxLeagues]);
 
