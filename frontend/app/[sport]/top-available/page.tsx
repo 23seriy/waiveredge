@@ -148,8 +148,17 @@ function PlayerHeadshot({ playerId, sport, size = 28, name }: { playerId: number
 }
 
 
+function relevantStatKeys(players: PlayerRow[], allKeys: string[]): string[] {
+  return allKeys.filter((key) =>
+    players.some((p) => {
+      const val = p.per_game[key];
+      return val !== undefined && val !== 0;
+    }),
+  );
+}
+
 function ProjectionsTable({ players, sport }: { players: PlayerRow[]; sport: string }) {
-  const statKeys = STAT_DISPLAY[sport]?.statistics ?? [];
+  const statKeys = relevantStatKeys(players, STAT_DISPLAY[sport]?.statistics ?? []);
 
   return (
     <div className="overflow-x-auto">
@@ -219,7 +228,7 @@ function ProjectionsTable({ players, sport }: { players: PlayerRow[]; sport: str
 
 
 function StatisticsTable({ players, sport }: { players: PlayerRow[]; sport: string }) {
-  const statKeys = STAT_DISPLAY[sport]?.statistics ?? [];
+  const statKeys = relevantStatKeys(players, STAT_DISPLAY[sport]?.statistics ?? []);
 
   return (
     <div className="overflow-x-auto">
