@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Crown, Loader2, Zap } from "lucide-react";
+import { useAuthUser } from "../components/auth-header";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 type Plan = "monthly" | "season";
@@ -22,6 +23,7 @@ const PRO_FEATURES = [
 ];
 
 export default function PricingPage() {
+  const { user, loaded } = useAuthUser();
   const [plan, setPlan] = useState<Plan>("season");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +32,14 @@ export default function PricingPage() {
     setLoading(true);
     setError(null);
     try {
+      if (!user) {
+        setError("Please sign in before upgrading.");
+        return;
+      }
       const res = await fetch(`${API_BASE}/api/billing/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: 1, plan }),
+        body: JSON.stringify({ user_id: user.id, plan }),
       });
       if (!res.ok) {
         const b = await res.json().catch(() => null);
@@ -146,11 +152,17 @@ export default function PricingPage() {
               ))}
             </ul>
             <button
-              onClick={handleCheckout}
+              onClick={loaded && !user ? undefined : handleCheckout}
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent py-3 text-sm font-semibold text-bg hover:brightness-110 transition-all shadow-lg shadow-accent/20 disabled:opacity-40 disabled:hover:shadow-none disabled:hover:brightness-100"
             >
-              {loading ? (
+              {!loaded ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : !user ? (
+                <Link href="/signin" className="flex items-center gap-2">
+                  Sign in to upgrade <ArrowRight size={14} />
+                </Link>
+              ) : loading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" /> Processing…
                 </>

@@ -45,7 +45,7 @@ export default function SignInPage() {
       }
       const data = await res.json();
       if (data.token) {
-        localStorage.setItem("waiveredge.token", data.token);
+        localStorage.setItem("we_token", data.token);
         router.replace("/");
       }
     } catch {
