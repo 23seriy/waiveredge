@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ChartNoAxesCombined, Link2, ListChecks, Shield, Zap } from "lucide-react";
+import { ArrowRight, Shield, Zap } from "lucide-react";
 import AuthHeader from "./components/auth-header";
 
 const SPORTS = [
@@ -33,26 +33,6 @@ const SPORTS = [
   },
 ];
 
-const STEPS = [
-  {
-    num: 1,
-    icon: ListChecks,
-    title: "Pick your sport",
-    text: "Choose MLB, WNBA, or NBA. You can switch anytime from the header.",
-  },
-  {
-    num: 2,
-    icon: Link2,
-    title: "Connect your league",
-    text: "Link your Yahoo or ESPN league for automatic roster import, or paste player names manually.",
-  },
-  {
-    num: 3,
-    icon: ChartNoAxesCombined,
-    title: "Get ranked recommendations",
-    text: "We crunch schedule density, matchups, and recent form — then rank who to add and who to drop.",
-  },
-];
 
 export default function Home() {
   return (
@@ -140,30 +120,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Getting started steps */}
-        <section className="border-t border-line/50 bg-surface/30">
-          <div className="mx-auto px-6 md:px-12 lg:px-20 py-16">
-            <h2 className="text-xl font-bold text-center mb-2">Getting Started</h2>
-            <p className="text-sm text-muted text-center mb-10 max-w-md mx-auto">
-              Three steps to smarter waiver moves. No account required.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              {STEPS.map((step) => (
-                <div key={step.num} className="relative text-center">
-                  <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-accent/10 border border-accent/20 mb-5">
-                    <step.icon size={24} className="text-accent" />
-                  </div>
-                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-accent text-bg text-xs font-bold flex items-center justify-center shadow-lg shadow-accent/30">
-                    {step.num}
-                  </div>
-                  <h3 className="text-sm font-semibold mb-2">{step.title}</h3>
-                  <p className="text-xs text-muted leading-relaxed">{step.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Trust bar */}
         <section className="border-t border-line/50">
           <div className="mx-auto px-6 md:px-12 lg:px-20 py-10 text-center">
@@ -193,6 +149,8 @@ export default function Home() {
               <Link href="/mlb" className="hover:text-accent transition-colors">MLB</Link>
               <Link href="/wnba" className="hover:text-accent transition-colors">WNBA</Link>
               <Link href="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
+              <Link href="/terms" className="hover:text-accent transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-accent transition-colors">Privacy</Link>
             </div>
           </div>
           <p className="text-center text-[11px] text-muted/60 mt-6">
