@@ -27,7 +27,7 @@ jobs:
         run: python -m pytest tests/ --ignore=tests/test_api.py --ignore=tests/test_recommendations.py -q
 
   frontend:
-    name: Frontend lint + build
+    name: Frontend build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,9 +39,9 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Lint
-        working-directory: frontend
-        run: npm run lint
+      # `npm run lint` (next lint) is intentionally omitted: ESLint isn't
+      # configured yet, so it drops into an interactive setup prompt that fails
+      # in CI. Configuring ESLint is a roadmap Phase 3 task; build is the gate.
       - name: Build
         working-directory: frontend
         run: npm run build
