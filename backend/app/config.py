@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_APP_SECRET = "change-me-in-production"
 
 
 class Settings(BaseSettings):
@@ -35,8 +38,12 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
 
+    # Deployment environment: "development" (default) | "production" | "staging".
+    # Anything other than "development" requires a real app_secret.
+    environment: str = "development"
+
     # App secret for signing session cookies (generate a random one for production).
-    app_secret: str = "change-me-in-production"
+    app_secret: str = _DEFAULT_APP_SECRET
 
     # OpenAI API key for LLM-generated rationales.
     openai_api_key: str = ""
@@ -49,6 +56,15 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_pro_monthly_price_id: str = ""     # price ID for $8/mo
     stripe_pro_season_price_id: str = ""      # price ID for $39/season
+
+    @model_validator(mode="after")
+    def _require_prod_secret(self) -> "Settings":
+        if self.environment != "development" and self.app_secret == _DEFAULT_APP_SECRET:
+            raise ValueError(
+                "APP_SECRET must be set when ENVIRONMENT is not 'development'. "
+                'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+            )
+        return self
 
 
 settings = Settings()
