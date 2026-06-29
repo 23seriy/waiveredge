@@ -268,8 +268,15 @@ def load_fixtures(sport: str = "nba") -> dict:
 
 
 def _remaining_window(week_start: str, week_end: str) -> tuple[str, str]:
-    """Use today as window start if we're mid-week, so only remaining games count."""
+    """Use today as window start if we're mid-week, so only remaining games count.
+
+    If today is past ``week_end`` (stale fixtures that haven't refreshed yet),
+    fall back to the full cached week so the API returns *something* useful
+    rather than an inverted empty window.
+    """
     today = date.today().isoformat()
+    if today > week_end:
+        return (week_start, week_end)
     return (max(today, week_start), week_end)
 
 
