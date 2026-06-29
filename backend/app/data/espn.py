@@ -252,6 +252,74 @@ class ESPNFantasyClient:
         }
         return self._post(league_id, season, "/transactions/", payload)
 
+    def pending_transactions(
+        self,
+        league_id: int,
+        season: int,
+        team_id: int,
+    ) -> list[dict]:
+        """Fetch pending waiver claims and recently executed transactions for a team.
+
+        Returns a list of dicts with keys: type (PENDING_WAIVER | EXECUTED),
+        add_name, add_espn_id, drop_name, drop_espn_id, timestamp.
+        """
+        try:
+            data = self.league_data(league_id, season, views=["mTransactions2"])
+        except Exception:
+            return []
+
+        transactions = data.get("transactions", [])
+        results = []
+        for txn in transactions:
+            # Only look at transactions involving this team.
+            items = txn.get("items", [])
+            involves_team = any(
+                item.get("toTeamId") == team_id or item.get("fromTeamId") == team_id
+                for item in items
+            )
+            if not involves_team:
+                continue
+
+            status = txn.get("status", "")
+            txn_type = txn.get("type", "")
+
+            # PENDING = waiver claim not yet processed
+            # EXECUTED = completed move
+            if status == "PENDING":
+                label = "PENDING_WAIVER"
+            elif status == "EXECUTED":
+                label = "EXECUTED"
+            else:
+                continue
+
+            add_name = None
+            add_espn_id = None
+            drop_name = None
+            drop_espn_id = None
+
+            for item in items:
+                player = item.get("player", {})
+                player_name = player.get("fullName", "")
+                player_id = item.get("playerId")
+                if item.get("type") == "ADD" and item.get("toTeamId") == team_id:
+                    add_name = player_name
+                    add_espn_id = player_id
+                elif item.get("type") == "DROP" and item.get("fromTeamId") == team_id:
+                    drop_name = player_name
+                    drop_espn_id = player_id
+
+            if add_name or drop_name:
+                results.append({
+                    "type": label,
+                    "add_name": add_name,
+                    "add_espn_id": add_espn_id,
+                    "drop_name": drop_name,
+                    "drop_espn_id": drop_espn_id,
+                    "timestamp": txn.get("proposedDate", 0),
+                })
+
+        return results
+
     def my_team_id(self, league_id: int, season: int) -> int | None:
         """Find the authenticated user's team ID (requires cookies)."""
         if not self._cookies:

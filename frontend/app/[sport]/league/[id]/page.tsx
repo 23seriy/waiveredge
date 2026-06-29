@@ -64,6 +64,7 @@ type PendingMove = {
   drop_name: string | null;
   drop_player_id: number | null;
   timestamp: number;
+  source?: "local" | "espn";
 };
 
 function getPendingMoves(connectionId: string): PendingMove[] {
@@ -261,7 +262,31 @@ export default function LeaguePage() {
       setLeague(leagueData);
       const rosterIds = leagueData.roster.map((p) => p.player_id);
       clearPendingMoves(connectionId, rosterIds);
-      setPendingMoves(getPendingMoves(connectionId));
+      const localMoves = getPendingMoves(connectionId).map((m) => ({ ...m, source: "local" as const }));
+
+      // Fetch ESPN pending transactions (non-blocking — don't fail if it errors).
+      let espnMoves: PendingMove[] = [];
+      try {
+        const pr = await fetch(`${API_BASE}/api/leagues/${connectionId}/pending`);
+        if (pr.ok) {
+          const pd = await pr.json();
+          espnMoves = (pd.pending || []).filter((t: { type: string }) => t.type === "PENDING_WAIVER").map(
+            (t: { add_name: string; add_espn_id: number; drop_name: string | null; drop_espn_id: number | null; timestamp: number }) => ({
+              add_name: t.add_name || "Unknown",
+              add_player_id: t.add_espn_id || 0,
+              drop_name: t.drop_name || null,
+              drop_player_id: t.drop_espn_id || null,
+              timestamp: t.timestamp,
+              source: "espn" as const,
+            }),
+          );
+        }
+      } catch { /* non-critical */ }
+
+      // Merge: deduplicate by add_name (local takes priority).
+      const localAddNames = new Set(localMoves.map((m) => m.add_name));
+      const merged = [...localMoves, ...espnMoves.filter((m) => !localAddNames.has(m.add_name))];
+      setPendingMoves(merged);
       if (rr.status === 402) {
         setError("__paywall__");
       } else if (rr.ok) {
@@ -381,7 +406,9 @@ export default function LeaguePage() {
               <div className="rounded-xl border border-line bg-card overflow-hidden">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-line">
                   {league.roster.map((p) => {
-                    const isPendingDrop = pendingMoves.some((m) => m.drop_player_id === p.player_id);
+                    const isPendingDrop = pendingMoves.some(
+                      (m) => (m.drop_player_id && m.drop_player_id === p.player_id) || (m.drop_name && m.drop_name === p.name),
+                    );
                     return (
                       <div key={p.player_id} className={`bg-card px-3 py-2 flex items-center gap-2 ${isPendingDrop ? "opacity-50" : ""}`}>
                         <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono shrink-0">
@@ -397,13 +424,13 @@ export default function LeaguePage() {
                     );
                   })}
                   {pendingMoves.map((m) => (
-                    <div key={`pending-${m.add_player_id}`} className="bg-card px-3 py-2 flex items-center gap-2 border-l-2 border-l-pos/50">
+                    <div key={`pending-${m.add_player_id}-${m.add_name}`} className="bg-card px-3 py-2 flex items-center gap-2 border-l-2 border-l-pos/50">
                       <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono shrink-0">
-                        NEW
+                        {m.source === "espn" ? "CLAIM" : "NEW"}
                       </span>
                       <span className="text-sm truncate text-pos/80">{m.add_name}</span>
                       <span className="flex items-center gap-0.5 text-[10px] text-pos bg-pos/10 border border-pos/20 rounded px-1.5 py-0.5 font-semibold uppercase tracking-wide shrink-0">
-                        <ArrowUp size={9} /> adding
+                        <ArrowUp size={9} /> {m.source === "espn" ? "waiver claim" : "adding"}
                       </span>
                     </div>
                   ))}
