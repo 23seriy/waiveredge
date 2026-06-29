@@ -141,6 +141,33 @@ def get_league(connection_id: int, db: Session = Depends(get_db)) -> dict:
     }
 
 
+@router.get("/{connection_id}/pending")
+def pending_moves(connection_id: int, db: Session = Depends(get_db)) -> dict:
+    """Fetch pending waiver claims and recent transactions from the platform."""
+    conn = _get_connection(connection_id, db)
+
+    if conn.platform != "espn":
+        return {"pending": [], "platform": conn.platform}
+
+    from ..data.espn import ESPNFantasyClient
+
+    tokens = conn.oauth_tokens or {}
+    sport = _sport_for_league(conn.league_id)
+    client = ESPNFantasyClient(
+        sport=sport,
+        espn_s2=tokens.get("espn_s2", ""),
+        swid=tokens.get("swid", ""),
+    )
+    espn_league_id = tokens.get("espn_league_id")
+    team_id = tokens.get("espn_team_id")
+    season = tokens.get("season")
+    if not espn_league_id or not team_id or not season:
+        return {"pending": [], "platform": "espn"}
+
+    txns = client.pending_transactions(espn_league_id, season, team_id)
+    return {"pending": txns, "platform": "espn"}
+
+
 @router.post("/{connection_id}/sync")
 def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     """Refresh the roster and free agents. Supports Yahoo and ESPN."""
