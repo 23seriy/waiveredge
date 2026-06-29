@@ -4,10 +4,13 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
+  ArrowDown,
+  ArrowUp,
   ArrowUpDown,
   Calendar,
   Check,
   ChevronDown,
+  Clock,
   Crown,
   ExternalLink,
   Flame,
@@ -53,6 +56,44 @@ type RecsPayload = {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 const LEAGUES_KEY = "waiveredge.leagues.v1";
+const PENDING_MOVES_KEY = "waiveredge.pending_moves.v1";
+
+type PendingMove = {
+  add_name: string;
+  add_player_id: number;
+  drop_name: string | null;
+  drop_player_id: number | null;
+  timestamp: number;
+};
+
+function getPendingMoves(connectionId: string): PendingMove[] {
+  try {
+    const raw = localStorage.getItem(`${PENDING_MOVES_KEY}.${connectionId}`);
+    if (!raw) return [];
+    const moves: PendingMove[] = JSON.parse(raw);
+    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    return moves.filter((m) => m.timestamp > cutoff);
+  } catch { return []; }
+}
+
+function addPendingMove(connectionId: string, move: PendingMove) {
+  const moves = getPendingMoves(connectionId);
+  localStorage.setItem(
+    `${PENDING_MOVES_KEY}.${connectionId}`,
+    JSON.stringify([...moves, move]),
+  );
+}
+
+function clearPendingMoves(connectionId: string, rosterPlayerIds: number[]) {
+  const moves = getPendingMoves(connectionId);
+  const rosterSet = new Set(rosterPlayerIds);
+  const remaining = moves.filter((m) => !rosterSet.has(m.add_player_id));
+  if (remaining.length === 0) {
+    localStorage.removeItem(`${PENDING_MOVES_KEY}.${connectionId}`);
+  } else {
+    localStorage.setItem(`${PENDING_MOVES_KEY}.${connectionId}`, JSON.stringify(remaining));
+  }
+}
 
 function saveLeagueId(sport: string, id: number) {
   try {
@@ -105,7 +146,16 @@ function RecCard({ rec, rank, mode, sport, platform, connectionId, onExecuted }:
       if (res.ok) {
         if (data.deep_link) window.open(data.deep_link, "_blank");
         setExecResult(data);
-        if (data.success) onExecuted();
+        if (data.success) {
+          addPendingMove(connectionId, {
+            add_name: rec.add_name,
+            add_player_id: rec.add_player_id,
+            drop_name: rec.drop_name,
+            drop_player_id: rec.drop_player_id,
+            timestamp: Date.now(),
+          });
+          onExecuted();
+        }
       } else {
         const detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
         setExecResult({ success: false, detail });
@@ -196,6 +246,7 @@ export default function LeaguePage() {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unresolved, setUnresolved] = useState<string[]>([]);
+  const [pendingMoves, setPendingMoves] = useState<PendingMove[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -206,7 +257,11 @@ export default function LeaguePage() {
         fetch(`${API_BASE}/api/leagues/${connectionId}/recs`),
       ]);
       if (!lr.ok) throw new Error(`League fetch failed (${lr.status})`);
-      setLeague((await lr.json()) as LeagueInfo);
+      const leagueData = (await lr.json()) as LeagueInfo;
+      setLeague(leagueData);
+      const rosterIds = leagueData.roster.map((p) => p.player_id);
+      clearPendingMoves(connectionId, rosterIds);
+      setPendingMoves(getPendingMoves(connectionId));
       if (rr.status === 402) {
         setError("__paywall__");
       } else if (rr.ok) {
@@ -315,15 +370,41 @@ export default function LeaguePage() {
 
           {league.roster.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-base font-semibold mb-3">Your Roster</h2>
+              <div className="flex items-center gap-3 mb-3">
+                <h2 className="text-base font-semibold">Your Roster</h2>
+                {pendingMoves.length > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-accent bg-accent/10 border border-accent/20 rounded-full px-2.5 py-0.5 font-medium">
+                    <Clock size={11} /> {pendingMoves.length} pending move{pendingMoves.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
               <div className="rounded-xl border border-line bg-card overflow-hidden">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-line">
-                  {league.roster.map((p) => (
-                    <div key={p.player_id} className="bg-card px-3 py-2 flex items-center gap-2">
+                  {league.roster.map((p) => {
+                    const isPendingDrop = pendingMoves.some((m) => m.drop_player_id === p.player_id);
+                    return (
+                      <div key={p.player_id} className={`bg-card px-3 py-2 flex items-center gap-2 ${isPendingDrop ? "opacity-50" : ""}`}>
+                        <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono shrink-0">
+                          {p.slot || "UTIL"}
+                        </span>
+                        <span className="text-sm truncate">{p.name}</span>
+                        {isPendingDrop && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-neg bg-neg/10 border border-neg/20 rounded px-1.5 py-0.5 font-semibold uppercase tracking-wide shrink-0">
+                            <ArrowDown size={9} /> dropping
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {pendingMoves.map((m) => (
+                    <div key={`pending-${m.add_player_id}`} className="bg-card px-3 py-2 flex items-center gap-2 border-l-2 border-l-pos/50">
                       <span className="text-xs bg-surface text-muted rounded px-1.5 py-0.5 font-mono shrink-0">
-                        {p.slot || "UTIL"}
+                        NEW
                       </span>
-                      <span className="text-sm truncate">{p.name}</span>
+                      <span className="text-sm truncate text-pos/80">{m.add_name}</span>
+                      <span className="flex items-center gap-0.5 text-[10px] text-pos bg-pos/10 border border-pos/20 rounded px-1.5 py-0.5 font-semibold uppercase tracking-wide shrink-0">
+                        <ArrowUp size={9} /> adding
+                      </span>
                     </div>
                   ))}
                 </div>
