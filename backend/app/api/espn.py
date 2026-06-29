@@ -25,6 +25,16 @@ from ..recommendations import build_espn_id_map, load_fixtures, resolve_names
 router = APIRouter(prefix="/api/espn", tags=["espn"])
 
 
+def _espn_user_email(sport: str, league_id: str, team_id: int | None) -> str:
+    """Build a stable, per-team account email for an ESPN connection.
+
+    Keyed on sport + league + team so two managers connecting the same (public)
+    league don't collapse into one shared account.
+    """
+    suffix = f"-t{team_id}" if team_id is not None else ""
+    return f"espn-{sport}-{league_id}{suffix}@waiveredge.local"
+
+
 def _current_espn_season(sport: str) -> int:
     """Compute the current ESPN season year for a sport.
 
@@ -121,7 +131,7 @@ def espn_connect(req: ESPNConnectRequest, db: Session = Depends(get_db)) -> dict
     fa_ids, _ = resolve_names(fa_names, fx["players"])
 
     # Upsert user.
-    email = f"espn-{req.league_id}@waiveredge.local"
+    email = _espn_user_email(req.sport, req.league_id, team_id)
     user = db.query(User).filter(User.email == email).first()
     if not user:
         user = User(email=email)
