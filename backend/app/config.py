@@ -21,6 +21,11 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:3000,https://localhost:3000"
 
+    # Optional regex for additional allowed origins (e.g. preview deploys).
+    # Empty by default — with allow_credentials=True we must not trust a
+    # wildcard host. Set explicitly in prod if you need preview-URL access.
+    cors_origin_regex: str = ""
+
     # Frontend URL for OAuth/billing redirects.
     frontend_url: str = "http://localhost:3000"
 
