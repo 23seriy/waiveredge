@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from: str = "WaiverEdge <onboarding@resend.dev>"
 
+    # Taste paywall: free users see only the #1 move; ranks 2-10 are blurred.
+    # Off by default — flip to true in the dashboard to enable without a deploy.
+    taste_paywall_enabled: bool = False
+
     # Sentry error monitoring (https://sentry.io — free tier: 5k errors/mo)
     sentry_dsn: str = ""
 

@@ -16,7 +16,7 @@ from ..data.yahoo import YahooFantasyClient
 from ..db import get_db
 from ..models import LeagueConnection, RosterEntry
 from ..recommendations import build_espn_id_map, build_recommendations, load_fixtures, resolve_names
-from .paywall import require_pro
+from .paywall import check_pro_or_free, require_pro
 
 router = APIRouter(prefix="/api/leagues", tags=["leagues"])
 
@@ -171,7 +171,9 @@ def pending_moves(connection_id: int, db: Session = Depends(get_db)) -> dict:
 @router.post("/{connection_id}/sync")
 def sync_roster(connection_id: int, db: Session = Depends(get_db)) -> dict:
     """Refresh the roster and free agents. Supports Yahoo and ESPN."""
-    require_pro(connection_id, db)
+    from ..config import settings
+    if not settings.taste_paywall_enabled:
+        require_pro(connection_id, db)
     conn = _get_connection(connection_id, db)
 
     if conn.platform == "espn":
@@ -344,8 +346,18 @@ def _refresh_yahoo_free_agents(conn: LeagueConnection, fx: dict, db: Session) ->
 
 @router.get("/{connection_id}/recs")
 def league_recommendations(connection_id: int, db: Session = Depends(get_db)) -> dict:
-    """Personalized recommendations for a connected league."""
-    require_pro(connection_id, db)
+    """Personalized recommendations for a connected league.
+
+    When TASTE_PAYWALL_ENABLED=true: free users receive the #1 rec in full and
+    locked stubs (position + game count only) for ranks 2-10. Pro users always
+    receive the full list. When the flag is off, the legacy hard gate (402 for
+    non-Pro) is preserved unchanged.
+    """
+    from ..config import settings
+
+    if not settings.taste_paywall_enabled:
+        require_pro(connection_id, db)
+
     conn = _get_connection(connection_id, db)
     roster_entries = db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).all()
     if not roster_entries:
@@ -356,7 +368,6 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
     cfg = fx["roster"]
 
     roster_ids = {r.player_id for r in roster_entries}
-    # Re-fetch free agents from the platform so recs reflect current availability.
     if conn.platform == "yahoo":
         fresh_fa_ids = _refresh_yahoo_free_agents(conn, fx, db)
         free_agents = [pid for pid in fresh_fa_ids if pid not in roster_ids]
@@ -372,9 +383,6 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
     scoring = conn.scoring_json or {}
     scoring_type = scoring.get("scoring_type", "")
     mode = "categories" if scoring_type in ("head", "roto") else "points"
-
-    # Use the league's actual scoring weights when available.
-    # ESPN stores weights directly; Yahoo uses categories with modifiers.
     league_weights = scoring.get("weights") or _yahoo_scoring_weights(scoring)
 
     fx["roster"] = {
@@ -388,12 +396,26 @@ def league_recommendations(connection_id: int, db: Session = Depends(get_db)) ->
         "droppable": droppable,
     }
 
+    all_recs = build_recommendations(fx, sport)
+    paywall_meta = None
+
+    if settings.taste_paywall_enabled and settings.stripe_secret_key:
+        is_pro = check_pro_or_free(connection_id, db)
+        if not is_pro:
+            locked_stubs = [
+                {"locked": True, "add_position": r.get("add_position"), "n_games": r.get("n_games")}
+                for r in all_recs[1:]
+            ]
+            all_recs = (all_recs[:1] if all_recs else []) + locked_stubs
+            paywall_meta = {"enabled": True, "free_count": 1}
+
     return {
         "connection_id": conn.id,
         "league_id": conn.league_id,
         "week": {"start": cfg["week_start"], "end": cfg["week_end"]},
         "scoring_mode": mode,
-        "recommendations": build_recommendations(fx, sport),
+        "recommendations": all_recs,
+        "paywall": paywall_meta,
     }
 
 

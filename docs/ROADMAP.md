@@ -14,8 +14,9 @@ rate. Don't expand surface area (sports/platforms) until the NBA/Yahoo loop is l
 - **Phase 0 — ✅ Done.** PRs #59 (ESPN collision), #60 (CORS), #61 (app_secret guard),
   #62 (CI), plus #66 (render.yaml CORS follow-up). 0.4 (key rotation) is a manual op.
 - **Phase 1 — 🟡 In progress.** The in-app injury-alert loop is live: per-league recs
-  already existed; NBA injury feed (#63), auto-scan (#65), and hourly injury refresh
-  (#67) are merged. **Remaining:** email delivery (1c) and the taste paywall (1d).
+  already existed; NBA injury feed (#63), auto-scan (#65), hourly injury refresh (#67),
+  and Resend email delivery (#69) are merged. **Remaining:** taste paywall (1d, feature-flagged,
+  disabled by default — flip `TASTE_PAYWALL_ENABLED=true` to activate).
 
 ---
 
@@ -49,10 +50,11 @@ rate. Don't expand surface area (sports/platforms) until the NBA/Yahoo loop is l
 - Auto-scan in the scheduler creates `InjuryAlert` rows for connected leagues (#65).
 - Hourly injury-only refresh keeps alerts timely without a full rebuild (#67).
 
-### 1c. Delivery — ⬜ remaining
-- Push/email on new alert (email first — cheapest). One provider, one template.
+### 1c. Delivery — ✅ done (#69)
+- Resend HTTP integration. Pro users with real emails receive injury alert emails.
+  No-ops when `RESEND_API_KEY` is unset.
 
-### 1d. Gate on a *taste* of personalization (conversion lever) — ⬜ remaining
+### 1d. Gate on a *taste* of personalization (conversion lever) — 🟡 implemented, flag off
 - Free: connect a league + see **your #1 move**; ranks 2–10 blurred; generic streamers.
 - Pro: full ranked list + injury alerts + unlimited leagues.
 - Move the paywall off "generic vs nothing" and onto "one taste vs your whole answer."

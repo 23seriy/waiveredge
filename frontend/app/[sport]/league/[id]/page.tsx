@@ -47,11 +47,18 @@ type LeagueInfo = {
   roster: { player_id: number; name: string; slot: string; droppable: boolean }[];
 };
 
+type LockedRecommendation = {
+  locked: true;
+  add_position: string;
+  n_games: number;
+};
+
 type RecsPayload = {
   connection_id: number;
   week: { start: string; end: string };
   scoring_mode: string;
-  recommendations: Recommendation[];
+  recommendations: (Recommendation | LockedRecommendation)[];
+  paywall: { enabled: boolean; free_count: number } | null;
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
@@ -232,6 +239,30 @@ function RecCard({ rec, rank, mode, sport, platform, connectionId, onExecuted }:
           )}
           {expanded && <p className="mt-1.5 text-sm text-muted leading-relaxed">{rec.rationale}</p>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LockedRecCard({ rec, rank }: { rec: LockedRecommendation; rank: number }) {
+  return (
+    <div className="relative rounded-xl border border-line bg-card p-4 overflow-hidden">
+      <div className="blur-sm select-none pointer-events-none opacity-60" aria-hidden>
+        <div className="flex gap-4 items-start">
+          <div className="flex flex-col items-center shrink-0 w-10">
+            <span className="text-xs text-muted font-medium">#{rank}</span>
+            <span className="text-lg font-bold text-pos">+??.?</span>
+          </div>
+          <div className="flex-1">
+            <div className="h-4 w-36 bg-surface rounded mb-2" />
+            <p className="text-sm text-muted">{rec.add_position} · {rec.n_games} game{rec.n_games !== 1 ? "s" : ""} this week</p>
+          </div>
+        </div>
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Link href="/pricing" className="flex items-center gap-1.5 rounded-lg bg-accent/15 border border-accent/30 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/25 transition-colors">
+          <Crown size={12} /> Upgrade to see
+        </Link>
       </div>
     </div>
   );
@@ -448,7 +479,26 @@ export default function LeaguePage() {
                 </div>
                 <span className="text-xs text-muted">{recs.recommendations.length} add{recs.recommendations.length !== 1 ? "s" : ""}</span>
               </div>
-              <div className="space-y-3">{recs.recommendations.map((r, i) => <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={leagueSport} platform={league?.platform ?? ""} connectionId={connectionId} onExecuted={loadData} />)}</div>
+              <div className="space-y-3">
+                {recs.recommendations.map((r, i) =>
+                  "locked" in r ? (
+                    <LockedRecCard key={`locked-${i}`} rec={r} rank={i + 1} />
+                  ) : (
+                    <RecCard key={r.add_player_id} rec={r} rank={i + 1} mode={mode} sport={leagueSport} platform={league?.platform ?? ""} connectionId={connectionId} onExecuted={loadData} />
+                  )
+                )}
+              </div>
+              {recs.paywall?.enabled && (
+                <div className="rounded-xl border border-accent/20 bg-accent/5 p-5 text-center mt-4">
+                  <Crown size={18} className="text-accent mx-auto mb-2" />
+                  <p className="text-sm text-muted mb-3">
+                    <span className="text-gray-200 font-medium">{recs.recommendations.length - recs.paywall.free_count} more moves</span> are waiting — unlock the full list.
+                  </p>
+                  <Link href="/pricing" className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90">
+                    <Crown size={14} /> Upgrade to Pro
+                  </Link>
+                </div>
+              )}
             </>
           )}
           {recs && recs.recommendations.length === 0 && league.roster.length > 0 && (
