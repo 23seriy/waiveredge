@@ -52,6 +52,16 @@ def _scheduler_loop() -> None:
             except Exception as e:
                 logger.warning("Scheduler error for %s: %s", sport, e)
 
+        # Scan connected leagues for injury-driven pickup opportunities.
+        try:
+            from .api.alerts import scan_all_connections
+            result = scan_all_connections()
+            if result["new_alerts"]:
+                logger.info("Injury scan: %d new alerts across %d connections",
+                            result["new_alerts"], result["connections_scanned"])
+        except Exception as e:
+            logger.warning("Injury scan failed: %s", e)
+
         time.sleep(CHECK_INTERVAL_SECONDS)
 
 

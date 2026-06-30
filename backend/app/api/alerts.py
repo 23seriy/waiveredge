@@ -14,9 +14,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..db import get_db
+from ..db import SessionLocal, get_db
 from ..models import InjuryAlert, LeagueConnection, RosterEntry
-from ..recommendations import build_recommendations, load_fixtures, resolve_names
+from ..recommendations import _is_fresh, build_recommendations, load_fixtures, resolve_names
 from ..scoring.engine import role_multiplier
 from ..scoring.types import Injury as ScoringInjury
 from ..scoring.types import Player
@@ -29,12 +29,15 @@ def _detect_injury_opportunities(
     sport: str,
     roster_player_ids: set[int],
     free_agent_ids: list[int],
+    fx: dict | None = None,
 ) -> list[dict]:
     """Find players whose teammates just got injured, creating pickup opportunities.
 
-    Returns a list of alert dicts for each detected opportunity.
+    Returns a list of alert dicts for each detected opportunity. ``fx`` may be
+    injected (for tests); otherwise fixtures are loaded for the sport.
     """
-    fx = load_fixtures(sport)
+    if fx is None:
+        fx = load_fixtures(sport)
     players_by_id = {p["id"]: Player(p["id"], p["name"], p["team_id"], p["positions"])
                      for p in fx["players"]}
     injuries = {i["player_id"]: ScoringInjury(**i) for i in fx["injuries"]}
@@ -81,16 +84,17 @@ def _detect_injury_opportunities(
     return alerts
 
 
-@router.post("/scan/{connection_id}")
-def scan_injuries(connection_id: int, db: Session = Depends(get_db)) -> dict:
-    """Scan for injury-driven pickup opportunities for a connected league."""
-    conn = db.query(LeagueConnection).filter(LeagueConnection.id == connection_id).first()
-    if not conn:
-        raise HTTPException(status_code=404, detail="Connection not found.")
+def scan_and_store(conn: LeagueConnection, db: Session) -> tuple[int, int]:
+    """Scan one connection for injury opportunities and persist new alerts.
 
+    Returns ``(opportunities_found, new_alerts)``. New alerts are deduplicated
+    against existing ones for the connection by (injured, pickup) pair.
+    """
     sport = _sport_for_league(conn.league_id)
-    roster_entries = db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).all()
-    roster_ids = {r.player_id for r in roster_entries}
+    roster_ids = {
+        r.player_id
+        for r in db.query(RosterEntry).filter(RosterEntry.connection_id == conn.id).all()
+    }
 
     # Get free agent IDs from stored data or fall back to all non-rostered.
     scoring_data = conn.scoring_json or {}
@@ -101,26 +105,51 @@ def scan_injuries(connection_id: int, db: Session = Depends(get_db)) -> dict:
 
     opportunities = _detect_injury_opportunities(sport, roster_ids, stored_fa_ids)
 
-    # Store new alerts (deduplicate by injured+pickup combo for this connection).
     existing = {
         (a.injured_player_id, a.pickup_player_id)
-        for a in db.query(InjuryAlert)
-        .filter(InjuryAlert.connection_id == conn.id)
-        .all()
+        for a in db.query(InjuryAlert).filter(InjuryAlert.connection_id == conn.id).all()
     }
     new_count = 0
     for opp in opportunities:
-        key = (opp["injured_player_id"], opp["pickup_player_id"])
-        if key not in existing:
-            db.add(InjuryAlert(
-                connection_id=conn.id,
-                sport=sport,
-                **opp,
-            ))
+        if (opp["injured_player_id"], opp["pickup_player_id"]) not in existing:
+            db.add(InjuryAlert(connection_id=conn.id, sport=sport, **opp))
             new_count += 1
     db.commit()
+    return len(opportunities), new_count
 
-    return {"scanned": True, "opportunities_found": len(opportunities), "new_alerts": new_count}
+
+def scan_all_connections() -> dict:
+    """Scan every connection for injury alerts. Used by the background scheduler.
+
+    Best-effort per connection (one failure doesn't abort the batch). Skips
+    sports whose fixtures aren't fresh so the scan never triggers a slow rebuild.
+    """
+    db = SessionLocal()
+    scanned = 0
+    total_new = 0
+    try:
+        for conn in db.query(LeagueConnection).all():
+            try:
+                if not _is_fresh(_sport_for_league(conn.league_id)):
+                    continue
+                _, new = scan_and_store(conn, db)
+                scanned += 1
+                total_new += new
+            except Exception:
+                db.rollback()
+    finally:
+        db.close()
+    return {"connections_scanned": scanned, "new_alerts": total_new}
+
+
+@router.post("/scan/{connection_id}")
+def scan_injuries(connection_id: int, db: Session = Depends(get_db)) -> dict:
+    """Scan for injury-driven pickup opportunities for a connected league."""
+    conn = db.query(LeagueConnection).filter(LeagueConnection.id == connection_id).first()
+    if not conn:
+        raise HTTPException(status_code=404, detail="Connection not found.")
+    found, new_count = scan_and_store(conn, db)
+    return {"scanned": True, "opportunities_found": found, "new_alerts": new_count}
 
 
 @router.get("/{connection_id}")
