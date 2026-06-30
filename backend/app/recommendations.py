@@ -267,6 +267,27 @@ def load_fixtures(sport: str = "nba") -> dict:
             for name in FIXTURE_FILES}
 
 
+def refresh_nba_injuries(data_dir: Path | None = None) -> int:
+    """Refresh only NBA ``injuries.json`` from the live ESPN feed.
+
+    Cheap (one HTTP call + name match) versus a full fixture rebuild, so the
+    scheduler can run it frequently to keep injury alerts timely. ``load_fixtures``
+    reads injuries from disk on every call, so the next scan sees the update.
+    No-ops if fixtures haven't been built yet (the full build populates injuries).
+    Returns the number of injuries written.
+    """
+    from .data.espn_injuries import fetch_nba_injuries
+    data_dir = data_dir or SPORT_DIRS["nba"]
+    players_file = data_dir / "players.json"
+    if not players_file.exists():
+        return 0
+    players = json.loads(players_file.read_text())
+    injuries = fetch_nba_injuries(players)
+    (data_dir / "injuries.json").write_text(json.dumps(injuries, indent=2))
+    logger.info("Refreshed NBA injuries: %d players", len(injuries))
+    return len(injuries)
+
+
 def _remaining_window(week_start: str, week_end: str) -> tuple[str, str]:
     """Use today as window start if we're mid-week, so only remaining games count.
 
