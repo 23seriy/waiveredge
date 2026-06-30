@@ -23,6 +23,7 @@ from pathlib import Path
 from ..scoring.projections import project_all
 from ..scoring.scoring_systems import DEFAULT_POINTS_SCORING
 from ..scoring.types import GameLog
+from .espn_injuries import fetch_nba_injuries
 
 DEFAULT_SEASONS = ["2025-26", "2024-25", "2023-24"]
 
@@ -270,7 +271,13 @@ def build_real_fixtures(out_dir: Path, seasons: list[str] | None = None) -> dict
     (out_dir / "players.json").write_text(json.dumps(players_json, indent=2))
     (out_dir / "game_logs.json").write_text(json.dumps(logs_json, indent=2))
     (out_dir / "schedule.json").write_text(json.dumps(schedule_json, indent=2))
-    (out_dir / "injuries.json").write_text(json.dumps([], indent=2))
+    try:
+        injuries_json = fetch_nba_injuries(players_json)
+        print(f"[PULL] ESPN injuries: {len(injuries_json)} matched to fixture players.")
+    except Exception as e:  # best-effort feed — degrade to no injuries
+        print(f"[PULL] ESPN injury fetch failed ({type(e).__name__}: {e}); writing empty injuries.")
+        injuries_json = []
+    (out_dir / "injuries.json").write_text(json.dumps(injuries_json, indent=2))
     (out_dir / "roster.json").write_text(json.dumps(roster_json, indent=2))
 
     return {

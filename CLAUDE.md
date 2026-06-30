@@ -100,6 +100,7 @@ pricing pages.
 
 ```
 stats.nba.com ──(nba_api)──► nba_fixtures.build_real_fixtures
+ESPN injuries API ─────────► espn_injuries.fetch_nba_injuries (NBA injuries.json)
 statsapi.mlb.com ──────────► mlb_fixtures.build_real_fixtures
 ESPN public API ───────────► wnba_fixtures.build_real_fixtures
                                   │
@@ -129,10 +130,12 @@ Postgres queries but reuse the engine unchanged.
 - **DvP multipliers are clamped** (`MULT_FLOOR`/`MULT_CEIL`, currently ±15%).
   Don't remove the clamp — it prevents a small DvP sample from dominating the
   ranking.
-- **The free-data path has no injury feed.** `role_mult` / `avail_prob` stay at
-  1.0 in production data until balldontlie ALL-STAR (or equivalent) is wired up.
-  The engine fully supports them and the unit tests cover both paths — don't
-  rip out the dormant code.
+- **Injury feeds are per-sport.** NBA has a free live injury feed via ESPN's
+  public API (`data/espn_injuries.py`, written into `injuries.json` at fixture
+  build), which activates `role_mult` / `avail_prob`. MLB and WNBA still have no
+  feed — their `injuries.json` is empty, so those signals stay at 1.0 there. The
+  engine supports both paths and the unit tests cover them — don't rip out the
+  code that handles empty injuries.
 - **Week selection is dynamic.** Don't hardcode season strings or dates;
   `nba_fixtures` auto-selects from `DEFAULT_SEASONS` and the densest mid-season
   week so the app keeps working as seasons roll over.
