@@ -94,9 +94,9 @@ marginal = weekly_value(candidate) − weekly_value(weakest droppable rostered p
 Everything is traceable — each recommendation shows the games, matchups, and injury
 logic that produced it.
 
-> Note: the free `nba_api` data path has no injury feed, so `role_mult`/`avail_prob` stay
-> at 1.0 until a paid injury source is added (see [Production data feed](#production-data-feed-optional)).
-> The engine fully supports them — they're covered by the unit tests.
+> Note: NBA injuries come from ESPN's free public API (`app/data/espn_injuries.py`), so
+> `role_mult`/`avail_prob` are live for NBA. MLB/WNBA have no injury feed yet, so those
+> signals stay at 1.0 there. The engine supports both paths — covered by the unit tests.
 
 ---
 
@@ -108,14 +108,17 @@ backend/                  FastAPI + Postgres
     sports.py             ← sport registry (NBA live, MLB config-only)
     scoring/              ← pure-stdlib scoring core (the IP)
     data/nba_fixtures.py  ← builds REAL fixtures from stats.nba.com (nba_api)
+    data/espn_injuries.py ← live NBA injury feed from ESPN's free public API
     data/balldontlie.py   ← optional production feed client (header auth, pagination)
     data/espn.py          ← ESPN Fantasy API client (cookies, read + write)
     data/yahoo.py         ← Yahoo Fantasy API client (OAuth + league data)
     data/ingest.py        ← optional balldontlie → Postgres / fixtures refresh
     api/auth.py           ← Yahoo OAuth endpoints
     api/leagues.py        ← per-user league sync + recs
+    api/alerts.py         ← injury alerts (scan + inbox + pickup opportunities)
     api/billing.py        ← Stripe checkout + webhook
     recommendations.py    ← service the API + prototype share (load_fixtures)
+    scheduler.py          ← background fixture refresh + injury refresh/scan
     models.py / db.py     ← SQLAlchemy 2.0
     main.py               ← API (sport-aware endpoints)
   migrations/
@@ -123,7 +126,7 @@ backend/                  FastAPI + Postgres
   sample_data_mlb/        ← materialized REAL MLB fixtures (gitignored)
   sample_data_wnba/       ← materialized REAL WNBA fixtures (gitignored)
   scripts/
-  tests/                  ← 110 unit tests
+  tests/                  ← 127 unit tests
 frontend/                 Next.js 15 + Tailwind CSS
   app/                    ← /, /[sport]/, /[sport]/streamers, /[sport]/connect, /[sport]/league/[id], /pricing
                             Supported sports: nba, mlb, wnba
@@ -153,10 +156,11 @@ docker compose up -d db
 
 The free `nba_api` → stats.nba.com path is perfect for development, but datacenter IPs
 get blocked, so a deployed server needs either residential proxies or a stabilized feed.
-**balldontlie ALL-STAR ($9.99/mo)** is the drop-in: it adds a clean **injury feed** (which
-unlocks the dormant role-bump / availability signals) and a documented SLA.
+NBA **injuries are already free** via ESPN's public API (no key needed), so the role-bump /
+availability signals are live out of the box. **balldontlie ALL-STAR ($9.99/mo)** remains an
+optional drop-in for a stabilized stats feed with a documented SLA.
 
-1. Get a key at <https://app.balldontlie.io> (stats + injuries need **ALL-STAR**).
+1. Get a key at <https://app.balldontlie.io> (stats need **ALL-STAR**).
 2. Set `BALLDONTLIE_API_KEY` in `backend/.env`.
 3. Refresh fixtures from it: `python -m app.data.ingest`, or load Postgres via `ingest_all(db)`.
 
@@ -176,13 +180,13 @@ unlocks the dormant role-bump / availability signals) and a documented SLA.
 - [x] Multi-sport architecture (NBA + MLB)
 - [x] MLB data pipeline (real data from MLB Stats API)
 - [x] ESPN league import (team picker, no cookies for public leagues)
-- [x] Live injury alert system (scan + inbox + pickup opportunities)
+- [x] Live NBA injury feed (ESPN free API) + auto-scanned pickup alerts (scan + inbox)
 - [x] LLM-powered AI rationales (OpenAI gpt-4o-mini)
 - [x] Fixture caching + background builds (24h cache, progress polling)
 - [x] Home page UX redesign (hero, clean header, sport-aware)
 - [x] WNBA support (ESPN leagues, ESPN public API for fixtures)
 - [x] ESPN programmatic add/drop (write API for all sports, deep-link fallback)
-- [x] 110 unit tests (API + engine + projections + matchups + name resolution + scoring systems + WNBA + ESPN transactions)
+- [x] 127 unit tests (API + engine + projections + matchups + name resolution + scoring systems + WNBA + ESPN transactions + injury feed + alerts + config guard)
 - [x] Deploy configs (Dockerfile, Railway, Fly.io, Vercel)
 - [x] Deploy MVP to production (Render + Vercel)
 - [ ] Nightly DvP recompute job + `team_dvp` cache

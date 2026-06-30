@@ -69,8 +69,11 @@ preference (inner is most stable):
    - `nba_fixtures.py` — builds real fixtures from **stats.nba.com via nba_api**.
      Auto-selects a representative mid-season week (densest week in the middle
      third of the latest available season) — no hardcoded dates. Imported lazily.
-   - `balldontlie.py` — optional production feed client (paid ALL-STAR tier
-     unlocks injuries → activates the dormant `role_mult` / `avail_prob` signals).
+   - `espn_injuries.py` — live NBA injury feed from ESPN's free public API; written
+     into `injuries.json` at build time and refreshed hourly by the scheduler,
+     activating `role_mult` / `avail_prob` for NBA (MLB/WNBA have no feed yet).
+   - `balldontlie.py` — optional production feed client (paid ALL-STAR tier for a
+     stabilized stats feed; NBA injuries no longer require it).
    - `espn.py` — ESPN Fantasy API client. **Read** via
      `lm-api-reads.fantasy.espn.com` (roster, free agents, settings).
      **Write** via `lm-api-writes.fantasy.espn.com` (`add_drop_player`,
@@ -86,9 +89,12 @@ preference (inner is most stable):
      `Jokic`). Also `build_espn_id_map()` which cross-references ESPN
      player IDs with fixture IDs for transaction execution.
    - `main.py` — FastAPI: `/health`, `/api/recommendations/sample`,
-     `POST /api/recommendations/manual {roster, droppable?}`. The per-user
-     `/api/recommendations/{connection_id}` is sketched out in a TODO and depends
-     on Yahoo OAuth + ingestion.
+     `POST /api/recommendations/manual {roster, droppable?}`. Per-user, per-league
+     recs live in `api/leagues.py` (`/api/leagues/{id}/recs`, Pro-gated); the old
+     `/api/recommendations/{connection_id}` stub in `main.py` is a redundant TODO.
+   - `api/alerts.py` + `scheduler.py` — the injury-alert loop: the scheduler
+     refreshes NBA injuries and scans connected leagues hourly, writing
+     `InjuryAlert` rows that the alerts API/UI surface.
    - `models.py` / `db.py` — SQLAlchemy 2.0; `migrations/0001_init.sql` is the
      source of truth for the schema today.
 

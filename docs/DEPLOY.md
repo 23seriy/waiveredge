@@ -67,16 +67,23 @@
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes (for leagues) | Postgres connection string |
-| `CORS_ORIGINS` | Yes | Frontend URL (comma-separated) |
+| `ENVIRONMENT` | Recommended | `production` enforces a real `APP_SECRET`; defaults to `development` |
+| `APP_SECRET` | Yes in prod | Session-signing secret; the app refuses to boot with the default outside `development` |
+| `CORS_ORIGINS` | Yes | Allowed frontend origins (comma-separated, no trailing slash) |
+| `CORS_ORIGIN_REGEX` | Optional | Regex for extra allowed origins (e.g. Vercel preview URLs); empty by default |
+| `FRONTEND_URL` | Yes (OAuth/billing) | Frontend base URL for post-login and Stripe redirects |
 | `YAHOO_CLIENT_ID` | For Yahoo OAuth | Yahoo app client ID |
 | `YAHOO_CLIENT_SECRET` | For Yahoo OAuth | Yahoo app client secret |
 | `YAHOO_REDIRECT_URI` | For Yahoo OAuth | Must match Yahoo app settings |
+| `GOOGLE_CLIENT_ID` | For Google login | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | For Google login | Google OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | For Google login | Must match the Google app's authorized redirect URI |
 | `OPENAI_API_KEY` | Optional | Enables AI rationale generation |
 | `STRIPE_SECRET_KEY` | Optional | Enables Pro billing |
 | `STRIPE_WEBHOOK_SECRET` | Optional | Stripe webhook verification |
 | `STRIPE_PRO_MONTHLY_PRICE_ID` | Optional | Stripe price ID for $8/mo |
 | `STRIPE_PRO_SEASON_PRICE_ID` | Optional | Stripe price ID for $39/season |
-| `BALLDONTLIE_API_KEY` | Optional | NBA injury feed (ALL-STAR tier) |
+| `BALLDONTLIE_API_KEY` | Optional | Stabilized stats feed (ALL-STAR tier). NBA injuries are already free via ESPN — no key needed for them. |
 
 ## Notes
 
