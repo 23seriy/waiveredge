@@ -79,6 +79,8 @@
 | `GOOGLE_CLIENT_SECRET` | For Google login | Google OAuth client secret |
 | `GOOGLE_REDIRECT_URI` | For Google login | Must match the Google app's authorized redirect URI |
 | `OPENAI_API_KEY` | Optional | Enables AI rationale generation |
+| `RESEND_API_KEY` | Optional | Enables injury-alert emails (Resend); no-ops if unset |
+| `RESEND_FROM` | Optional | Sender, e.g. `WaiverEdge <alerts@yourdomain>`; domain must be verified in Resend |
 | `STRIPE_SECRET_KEY` | Optional | Enables Pro billing |
 | `STRIPE_WEBHOOK_SECRET` | Optional | Stripe webhook verification |
 | `STRIPE_PRO_MONTHLY_PRICE_ID` | Optional | Stripe price ID for $8/mo |
