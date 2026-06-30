@@ -14,8 +14,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..db import SessionLocal, get_db
-from ..models import InjuryAlert, LeagueConnection, RosterEntry
+from ..email import send_email
+from ..models import InjuryAlert, LeagueConnection, RosterEntry, User
 from ..recommendations import _is_fresh, build_recommendations, load_fixtures, resolve_names
 from ..scoring.engine import role_multiplier
 from ..scoring.types import Injury as ScoringInjury
@@ -84,6 +86,38 @@ def _detect_injury_opportunities(
     return alerts
 
 
+def _format_alert_email(sport: str, connection_id: int, new_alerts: list[dict]) -> tuple[str, str]:
+    """Build (subject, html) for a digest of newly-detected pickup opportunities."""
+    n = len(new_alerts)
+    subject = f"WaiverEdge: {n} injury pickup{'s' if n != 1 else ''} in your {sport.upper()} league"
+    rows = "".join(
+        f"<li><b>{a['pickup_player_name']}</b> — {a['pickup_rationale']}</li>"
+        for a in new_alerts
+    )
+    link = f"{settings.frontend_url.rstrip('/')}/{sport}/alerts/{connection_id}"
+    html = (
+        f"<h2>{n} new waiver pickup{'s' if n != 1 else ''} from injuries</h2>"
+        f"<ul>{rows}</ul>"
+        f'<p><a href="{link}">View in WaiverEdge</a></p>'
+    )
+    return subject, html
+
+
+def _notify_new_alerts(conn: LeagueConnection, db: Session, sport: str, new_alerts: list[dict]) -> None:
+    """Email a Pro user a digest of new alerts (best-effort).
+
+    Skips when: no real email (synthetic ESPN accounts), user opted out, or the
+    user isn't on Pro (alerts are a paid feature).
+    """
+    user = db.query(User).filter(User.id == conn.user_id).first()
+    if not user or not user.email or user.email.endswith("@waiveredge.local"):
+        return
+    if user.tier != "pro" or not user.alert_email:
+        return
+    subject, html = _format_alert_email(sport, conn.id, new_alerts)
+    send_email(user.email, subject, html)
+
+
 def scan_and_store(conn: LeagueConnection, db: Session) -> tuple[int, int]:
     """Scan one connection for injury opportunities and persist new alerts.
 
@@ -109,13 +143,15 @@ def scan_and_store(conn: LeagueConnection, db: Session) -> tuple[int, int]:
         (a.injured_player_id, a.pickup_player_id)
         for a in db.query(InjuryAlert).filter(InjuryAlert.connection_id == conn.id).all()
     }
-    new_count = 0
+    created: list[dict] = []
     for opp in opportunities:
         if (opp["injured_player_id"], opp["pickup_player_id"]) not in existing:
             db.add(InjuryAlert(connection_id=conn.id, sport=sport, **opp))
-            new_count += 1
+            created.append(opp)
     db.commit()
-    return len(opportunities), new_count
+    if created:
+        _notify_new_alerts(conn, db, sport, created)
+    return len(opportunities), len(created)
 
 
 def scan_all_connections() -> dict:

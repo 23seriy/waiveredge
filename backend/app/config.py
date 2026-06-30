@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     # OpenAI API key for LLM-generated rationales.
     openai_api_key: str = ""
 
+    # Resend transactional email for injury alerts. Optional — sends no-op if unset.
+    # `resend_from` must use a domain verified in Resend (onboarding@resend.dev works
+    # for testing, but only delivers to your own Resend account email).
+    resend_api_key: str = ""
+    resend_from: str = "WaiverEdge <onboarding@resend.dev>"
+
     # Sentry error monitoring (https://sentry.io — free tier: 5k errors/mo)
     sentry_dsn: str = ""
 
