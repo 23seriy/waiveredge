@@ -18,6 +18,7 @@ from .recommendations import (
     _build_fixtures_background,
     _build_status,
     _is_fresh,
+    refresh_nba_injuries,
 )
 
 logger = logging.getLogger("waiveredge.scheduler")
@@ -51,6 +52,12 @@ def _scheduler_loop() -> None:
                         logger.debug("Fixtures for %s are fresh (%.1fh old)", sport, age_h)
             except Exception as e:
                 logger.warning("Scheduler error for %s: %s", sport, e)
+
+        # Refresh live NBA injuries (cheap) so the scan sees current data.
+        try:
+            refresh_nba_injuries()
+        except Exception as e:
+            logger.warning("NBA injury refresh failed: %s", e)
 
         # Scan connected leagues for injury-driven pickup opportunities.
         try:
