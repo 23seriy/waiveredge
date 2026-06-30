@@ -24,7 +24,7 @@ class CheckoutRequest(BaseModel):
 
 
 @router.post("/checkout")
-def create_checkout(req: CheckoutRequest, user: User = Depends(require_user)) -> dict:
+def create_checkout(req: CheckoutRequest, user: User = Depends(require_user), db: Session = Depends(get_db)) -> dict:
     """Create a Stripe Checkout session for Pro subscription."""
     if not settings.stripe_secret_key:
         raise HTTPException(status_code=503, detail="Stripe is not configured.")
