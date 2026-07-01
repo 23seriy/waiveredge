@@ -392,6 +392,7 @@ function DashboardContent() {
   const [mode, setMode] = useState<ScoringMode>("points");
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paywalled, setPaywalled] = useState(false);
   const [loading, setLoading] = useState(false);
   const autoSubmitted = useRef(false);
   const leagueLoaded = useRef<number | null>(null);
@@ -400,10 +401,11 @@ function DashboardContent() {
   const fetchLeagueRecs = useCallback(async (connectionId: number) => {
     setLoading(true);
     setError(null);
+    setPaywalled(false);
     try {
       const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/recs`);
       if (res.status === 402) {
-        setError("__paywall__");
+        setPaywalled(true);
         setData(null);
       } else if (res.ok) {
         setData((await res.json()) as Payload);
@@ -533,7 +535,7 @@ function DashboardContent() {
       <FixtureStatus sport={sport} />
 
       {/* Paywall */}
-      {error === "__paywall__" && (
+      {paywalled && (
         <div className="rounded-xl border-2 border-accent bg-accent/5 p-6 text-center mb-6 animate-fade-in">
           <Crown size={28} className="text-accent mx-auto mb-2" />
           <h3 className="text-lg font-bold mb-1">Upgrade to Pro</h3>
@@ -545,7 +547,7 @@ function DashboardContent() {
       )}
 
       {/* Error */}
-      {error && error !== "__paywall__" && (
+      {error && (
         <div className="rounded-xl border border-neg/30 bg-neg/5 px-4 py-4 mb-5 animate-fade-in">
           <p className="text-sm text-neg">{error}</p>
         </div>

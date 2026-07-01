@@ -277,12 +277,14 @@ export default function LeaguePage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paywalled, setPaywalled] = useState(false);
   const [unresolved, setUnresolved] = useState<string[]>([]);
   const [pendingMoves, setPendingMoves] = useState<PendingMove[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPaywalled(false);
     try {
       const [lr, rr] = await Promise.all([
         fetch(`${API_BASE}/api/leagues/${connectionId}`),
@@ -319,7 +321,7 @@ export default function LeaguePage() {
       const merged = [...localMoves, ...espnMoves.filter((m) => !localAddNames.has(m.add_name))];
       setPendingMoves(merged);
       if (rr.status === 402) {
-        setError("__paywall__");
+        setPaywalled(true);
       } else if (rr.ok) {
         setRecs((await rr.json()) as RecsPayload);
       } else {
@@ -349,7 +351,7 @@ export default function LeaguePage() {
     try {
       const res = await fetch(`${API_BASE}/api/leagues/${connectionId}/sync`, { method: "POST" });
       if (res.status === 402) {
-        setError("__paywall__");
+        setPaywalled(true);
         return;
       }
       if (!res.ok) {
@@ -377,7 +379,7 @@ export default function LeaguePage() {
   return (
     <main className="mx-auto px-6 md:px-12 lg:px-20 py-8">
       {loading && <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-accent" /><span className="ml-2 text-muted">Loading…</span></div>}
-      {error === "__paywall__" && (
+      {paywalled && (
         <div className="rounded-xl border-2 border-accent bg-accent/5 p-6 text-center mb-6">
           <Crown size={28} className="text-accent mx-auto mb-2" />
           <h3 className="text-lg font-bold mb-1">Upgrade to Pro</h3>
@@ -387,7 +389,7 @@ export default function LeaguePage() {
           </Link>
         </div>
       )}
-      {error && error !== "__paywall__" && <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6"><p className="text-sm text-neg">{error}</p></div>}
+      {error && <div className="rounded-lg border border-neg/30 bg-neg/10 px-4 py-3 mb-6"><p className="text-sm text-neg">{error}</p></div>}
 
       {league && !loading && (
         <>
